@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CONTEC · Contábil - Sistema de Acompanhamento</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+<!-- Firebase (compat SDK, mais simples de usar sem build tools) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+<style>
+:root{
+  --azul-contec:#1a237e;
+  --azul-contec-2:#283593;
+  --dourado-contec:#ee9b02;
+  --verde-ok:#198754;
+  --bg:#f4f6f8;
+}
+/* Altere a linha do body no seu CSS */
+body {
+    font-family: 'Inter', Arial, Helvetica, sans-serif; /* A fonte Inter será a principal */
+    background: var(--bg);
+    font-size: .9rem;
+    color: #22262e;
+}
+/* Ajuste para centralizar o conteúdo do meio */
+header.topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+header.topo .brand-center {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    color: #fff;
+    font-size: 0.7rem;
+    letter-spacing: 1px;
+}
+
+/* Garante que o userbox fique alinhado à direita */
+header.topo .userbox {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+}
+header.topo .brand img { vertical-align: middle; }
+header.topo{background:var(--azul-contec);border-bottom:4px solid var(--dourado-contec);padding:14px 22px;display:flex;align-items:center;gap:14px;color:#fff;}
+header.topo .brand{font-weight:800;letter-spacing:.5px;font-size:1.15rem;}
+header.topo .brand small{display:block;font-weight:400;font-size:.68rem;opacity:.8;letter-spacing:1px;}
+header.topo .userbox{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:.82rem;}
+header.topo .userbox button{border:1px solid rgba(255,255,255,.5);background:transparent;color:#fff;border-radius:4px;padding:4px 10px;font-size:.78rem;}
+header.topo .userbox button:hover{background:rgba(255,255,255,.12);}
+
+.main-content{padding:22px;max-width:1400px;margin:0 auto;}
+
+/* LOGIN */
+#loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,var(--azul-contec) 0%,var(--azul-contec-2) 55%,#10143d 100%);}
+.login-card img { max-width: 100%; height: auto; }
+.login-card{background:#fff;border-radius:10px;width:340px;padding:34px 30px;box-shadow:0 20px 50px rgba(0,0,0,.35);}
+.login-card .logo-mark{width:54px;height:54px;border-radius:10px;background:var(--dourado-contec);color:var(--azul-contec);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.3rem;margin:0 auto 14px;}
+.login-card h1{font-size:1.05rem;font-weight:800;color:var(--azul-contec);text-align:center;margin-bottom:2px;}
+.login-card p.sub{text-align:center;color:#8a8f98;font-size:.75rem;margin-bottom:20px;}
+.login-card label{font-size:.75rem;font-weight:700;color:#555;}
+.login-card .btn-entrar{background:var(--azul-contec);border-color:var(--azul-contec);font-weight:700;}
+.login-card .btn-entrar:hover{background:var(--azul-contec-2);}
+#loginErro{font-size:.78rem;color:#c62828;text-align:center;margin-top:10px;min-height:16px;}
+
+/* Toolbar / filtros */
+.form-row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;background:#fff;padding:14px;border-radius:6px;border:1px solid #e3e5e8;margin-bottom:14px;}
+.input-group-custom{display:flex;flex-direction:column;}
+.input-group-custom label{font-size:.7rem;font-weight:800;color:#555;letter-spacing:.4px;margin-bottom:3px;}
+.toolbar-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.toolbar-btns .btn{font-weight:700;font-size:.8rem;}
+
+/* Progresso geral */
+.progress-container{background:#fff;border:1px solid #e3e5e8;border-radius:6px;padding:12px 16px;margin-bottom:16px;}
+.progress{height:18px;border-radius:4px;}
+.progress-bar{background-color:var(--azul-contec);font-weight:700;}
+
+/* Tabela de empresas */
+.table-responsive{background:#fff;border:1px solid #e3e5e8;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.04);}
+table#tabelaEmpresas thead th{background:var(--azul-contec);color:#fff;font-size:.72rem;letter-spacing:.3px;text-transform:uppercase;position:sticky;top:0;padding:10px 8px;vertical-align:middle;}
+table#tabelaEmpresas tbody tr{cursor:pointer;}
+table#tabelaEmpresas tbody tr:hover{background:#eef1fb;}
+table#tabelaEmpresas td{vertical-align:middle;font-size:.83rem;}
+.badge-regime{font-size:.68rem;font-weight:700;padding:4px 8px;border-radius:20px;}
+.badge-sn{background:#e3f2e3;color:#1b5e20;}
+.badge-lp{background:#e3eafc;color:var(--azul-contec);}
+.badge-real{background:#fde3e3;color:#8b1e1e;}
+.mini-progress{height:8px;border-radius:4px;background:#e9ecef;width:120px;overflow:hidden;}
+.mini-progress > div{height:100%;background:var(--verde-ok);}
+.status-chip{font-size:.68rem;font-weight:800;padding:3px 9px;border-radius:20px;}
+.chip-fechado{background:#d1e7dd;color:#0f5132;}
+.chip-andamento{background:#fff3cd;color:#7a5b00;}
+.chip-naoiniciado{background:#f8d7da;color:#842029;}
+.chip-aguardando{background:#e2e3ff;color:#3730a3;}
+.pend-badge{background:#dc3545;color:#fff;border-radius:20px;font-size:.65rem;font-weight:800;padding:2px 7px;}
+.badge-mes {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #e9ecef;
+    margin: 2px;
+    font-size: 0.7rem;
+    text-align: center;
+    line-height: 20px;
+    color: #666;
+    font-weight: 600;
+}
+.badge-mes.fechado { 
+    background: var(--verde-ok); 
+    color: #fff; 
+}
+
+/* View checklist */
+#viewChecklist{display:none;}
+.back-link{display:inline-flex;align-items:center;gap:6px;color:#555;font-weight:700;font-size:.82rem;text-decoration:none;margin-bottom:12px;}
+.back-link:hover{color:var(--azul-contec);}
+.checklist-header{background:#fff;border:1px solid #e3e5e8;border-radius:6px;padding:16px 18px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.checklist-header h2{font-size:1.15rem;font-weight:800;color:var(--azul-contec);margin:0;}
+.checklist-header .sub{font-size:.78rem;color:#777;}
+.save-indicator{font-size:.72rem;color:#198754;font-weight:700;display:flex;align-items:center;gap:5px;}
+.save-indicator.saving{color:#b8860b;}
+.btn-action {
+    cursor: pointer;
+    border: none;
+    background: transparent;
+    color: #9aa0a6;
+    padding: 0 5px;
+    font-size: 0.75rem;
+}
+.btn-action:hover { color: var(--azul-contec); }
+.btn-add-item {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    background: var(--dourado-contec);
+    color: #fff;
+    border-radius: 4px;
+    border: none;
+    font-weight: 800;
+}
+
+.section-card{background:#fff;border:1px solid #e3e5e8;border-radius:6px;margin-bottom:14px;overflow:hidden;}
+.section-card .section-title{background:var(--dourado-contec);color:#3a2e00;font-weight:800;font-size:.85rem;padding:9px 16px;display:flex;justify-content:space-between;align-items:center;letter-spacing:.3px;}
+.section-card .section-title .sec-progress{font-size:.7rem;font-weight:700;background:rgba(255,255,255,.55);padding:2px 8px;border-radius:20px;}
+.item-row{display:flex;align-items:center;gap:10px;padding:8px 16px;border-top:1px solid #f0f1f3;}
+.item-row:nth-child(odd){background:#fafbfc;}
+.item-row .item-text{flex:1;font-size:.83rem;}
+.status-toggle{border:none;font-weight:800;font-size:.7rem;padding:5px 12px;border-radius:20px;min-width:96px;text-align:center;cursor:pointer;transition:.15s;}
+.status-toggle.pendente{background:#f1f2f4;color:#6b7280;}
+.status-toggle.ok{background:#d1e7dd;color:#0f5132;}
+.status-toggle.na{background:#eeeeee;color:#9aa0a6;font-style:italic;}
+.obs-input{border:1px solid #e3e5e8;border-radius:4px;font-size:.76rem;padding:4px 8px;width:220px;}
+
+/* Conciliação */
+.conc-row{display:grid;grid-template-columns:1.6fr .9fr .9fr .8fr .9fr 1.3fr;gap:8px;align-items:center;padding:8px 16px;border-top:1px solid #f0f1f3;}
+.conc-row.head{font-size:.68rem;font-weight:800;color:#777;background:#fafbfc;text-transform:uppercase;}
+.conc-row input[type=number]{font-size:.8rem;padding:4px 6px;border:1px solid #e3e5e8;border-radius:4px;width:100%;}
+.conc-diff{font-weight:800;text-align:center;padding:4px;border-radius:4px;font-size:.8rem;}
+.conc-diff.zero{background:#d1e7dd;color:#0f5132;}
+.conc-diff.dif{background:#fde3e3;color:#8b1e1e;}
+
+.empty-state{text-align:center;padding:50px 20px;color:#9aa0a6;}
+.empty-state i{font-size:2.2rem;margin-bottom:10px;display:block;}
+
+@media (max-width:768px){
+  .conc-row{grid-template-columns:1fr;}
+  .obs-input{width:100%;}
+}
+
+@media print {
+    @page { size: landscape; margin: 10mm; }
+    
+    /* Força o navegador a imprimir cores e fundos exatamente como na tela */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+    /* Esconde os controles que não fazem parte do checklist */
+    .back-link, .btn-action, .btn-add-item, .save-indicator, header {
+        display: none !important;
+    }
+
+    /* Estrutura de linha do checklist (exatamente como no print) */
+    .item-row {
+        display: grid !important;
+        grid-template-columns: 120px 1fr 200px !important; /* Colunas fixas para o layout não quebrar */
+        align-items: center !important;
+        gap: 10px !important;
+        margin-bottom: 5px !important;
+    }
+
+    /* Estilização dos campos de observação para ficarem iguais ao print */
+    .obs-input {
+        background: #f8f9fa !important;
+        border: 1px solid #dee2e6 !important;
+        border-radius: 4px !important;
+        padding: 5px !important;
+        width: 100% !important;
+        font-size: 8pt !important;
+    }
+
+    /* Mantém os botões de status com a aparência original */
+    .status-toggle {
+        display: inline-block !important;
+        border-radius: 20px !important;
+        padding: 4px 12px !important;
+        text-align: center;
+        font-weight: 500;
+        font-size: 8pt !important;
+    }
+
+    .table-conciliacao {
+        display: table !important;
+        width: 100% !important;
+        table-layout: fixed !important; /* Força colunas com largura fixa */
+    }
+
+    .table-conciliacao th, 
+    .table-conciliacao td {
+        word-wrap: break-word !important;
+        font-size: 7pt !important;
+        padding: 2px !important;
+        border: 1px solid #ccc !important;
+    }
+
+    /* Oculta os ícones de seta que aparecem no print e bagunçam o layout */
+    .btn-arrow {
+        display: none !important;
+    }
+}
+
+</style>
+</head>
+<body>
+
+<!-- ===================== LOGIN ===================== -->
+<div id="loginScreen">
+  <div class="login-card">
+    <img src="logo.png" alt="Logo" style="width: 200px; display: block; margin: 0 auto 14px;">
+    <h1>CONTEC · Contábil</h1>
+    <p class="sub">Sistema de acompanhamento de fechamento mensal</p>
+    <form id="formLogin">
+      <div class="mb-2">
+        <label>E-mail</label>
+        <input type="email" class="form-control form-control-sm" id="loginEmail" required autocomplete="username">
+      </div>
+      <div class="mb-2">
+        <label>Senha</label>
+        <input type="password" class="form-control form-control-sm" id="loginSenha" required autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-entrar w-100 mt-2">Entrar</button>
+      <div id="loginErro"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div id="appScreen" style="display:none;">
+  <header class="topo">
+    <!-- Espaçador invisível para centralizar a logo/texto -->
+    <div style="flex: 1;"></div>
+    
+    <!-- Centro: Logo e Texto -->
+    <div class="brand-center">
+        <img src="logo.png" alt="Logo" style="height: 80px; margin-bottom: 5px;">
+        <small>SISTEMA DE ACOMPANHAMENTO · FECHAMENTO MENSAL</small>
+    </div>
+    
+    <!-- Direita: Usuário e Botão -->
+    <div class="userbox">
+        <span id="userEmailDisplay"><i class="fa-solid fa-circle-user"></i></span>
+        <button onclick="sair()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+    </div>
+</header>
+
+  <div class="main-content">
+
+    <!-- ---------- VIEW 1: LISTA DE EMPRESAS ---------- -->
+    <div id="viewEmpresas">
+
+      <div class="form-row">
+        <div class="input-group-custom" style="width:160px;">
+          <label>COMPETÊNCIA</label>
+          <input type="month" id="competencia" class="form-control form-control-sm">
+        </div>
+        <div class="input-group-custom" style="flex:1;min-width:200px;">
+          <label>BUSCAR EMPRESA</label>
+          <input type="text" id="buscaEmpresa" class="form-control form-control-sm" placeholder="Nome, CNPJ, responsável..." onkeyup="renderizarTabela()">
+        </div>
+        <div class="input-group-custom">
+          <label>STATUS</label>
+          <select id="filtroStatus" class="form-select form-select-sm" onchange="renderizarTabela()">
+            <option value="TODOS">Todos</option>
+            <option value="Não iniciado">Não iniciado</option>
+            <option value="Em andamento">Em andamento</option>
+            <option value="Aguardando cliente">Aguardando cliente</option>
+            <option value="Fechado">Fechado</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="toolbar-btns">
+    <!-- Botão Nova Empresa -->
+    <button class="btn btn-primary btn-sm" onclick="abrirModalEmpresa()" style="background:var(--azul-contec); border-color:var(--azul-contec);">
+        <i class="fa-solid fa-plus"></i> Nova Empresa
+    </button>
+    
+    <!-- Botão Imprimir -->
+    <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+        <i class="fa-solid fa-print"></i> Imprimir Painel
+    </button>
+
+    <!-- Botão Backup -->
+    <button class="btn btn-outline-success btn-sm" onclick="fazerBackup()">
+        <i class="fa-solid fa-download"></i> Backup
+    </button>
+    
+    <!-- Botão Restaurar -->
+    <button class="btn btn-warning btn-sm" onclick="document.getElementById('inputArquivo').click()">
+        <i class="fa-solid fa-upload"></i> Restaurar
+    </button>
+    
+    <!-- Input invisível -->
+    <input type="file" id="inputArquivo" style="display:none" onchange="restaurarBackupCompleto(event)" accept=".json">
+</div> <!-- Fechamento da div agora está aqui, envolvendo todos os botões -->
+
+      <div class="progress-container">
+        <div class="d-flex justify-content-between mb-1">
+          <span class="fw-bold" style="color:var(--azul-contec);">Progresso geral da competência</span>
+          <span class="fw-bold small" id="progressoTexto">0% (0/0)</span>
+        </div>
+        <div class="progress">
+          <div id="barraProgresso" class="progress-bar" role="progressbar" style="width:0%">0%</div>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle" id="tabelaEmpresas">
+          <thead>
+            <tr>
+              <th style="text-align:left;">Empresa</th>
+              <th>Regime</th>
+              <th>Competências Fechadas</th> <!-- Nova coluna -->
+              <th>Progresso do checklist</th>
+              <th>Pendências</th>
+              <th>Status</th>
+              <th>Ações</th> <!-- Nova coluna -->
+            </tr>
+          </thead>
+          <tbody id="corpoTabelaEmpresas"></tbody>
+        </table>
+      </div>
+      
+      <div id="estadoVazio" class="empty-state" style="display:none;">
+        <i class="fa-solid fa-building-circle-exclamation"></i>
+        Nenhuma empresa cadastrada ainda. Clique em "Nova Empresa" para começar.
+      </div>
+    </div>
+
+    <!-- ---------- VIEW 2: CHECKLIST DA EMPRESA ---------- -->
+    <div id="viewChecklist">
+      <a href="#" class="back-link" onclick="voltarParaLista();return false;"><i class="fa-solid fa-arrow-left"></i> Voltar ao painel</a>
+
+      <div class="checklist-header">
+        <div>
+          <h2 id="chkEmpresaNome">-</h2>
+          <div class="sub" id="chkEmpresaSub">-</div>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+          <button class="btn btn-outline-secondary btn-sm" onclick="window.print()">
+            <i class="fa-solid fa-print"></i> Imprimir
+          </button>
+          <div class="input-group-custom">
+            <label style="font-size:.65rem;">STATUS GERAL</label>
+            <select id="chkStatusGeral" class="form-select form-select-sm" onchange="salvarStatusGeral()">
+              <option>Não iniciado</option>
+              <option>Em andamento</option>
+              <option>Aguardando cliente</option>
+              <option>Fechado</option>
+            </select>
+          </div>
+          <span class="save-indicator" id="saveIndicator"><i class="fa-solid fa-check"></i> Salvo</span>
+        </div>
+      </div>
+
+      <div id="secoesChecklist"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== MODAL CADASTRO EMPRESA ===================== -->
+<div class="modal fade" id="modalEmpresa" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header text-white py-2" style="background:var(--azul-contec);">
+        <h6 class="modal-title fw-bold">Nova Empresa</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <form id="formEmpresaCad" class="row g-2">
+          <input type="hidden" id="editEmpresaId">
+          <div class="col-md-8">
+            <label class="small fw-bold">Razão Social / Nome</label>
+            <input type="text" class="form-control form-control-sm" id="cadNome" required oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <div class="col-md-4">
+            <label class="small fw-bold">Regime</label>
+            <select class="form-select form-select-sm" id="cadRegime">
+              <option value="SN">Simples Nacional</option>
+              <option value="LP">Lucro Presumido</option>
+              <option value="REAL">Lucro Real</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="small fw-bold">CNPJ</label>
+            <input type="text" class="form-control form-control-sm" id="cadCnpj">
+          </div>
+          <div class="col-md-6">
+            <label class="small fw-bold">Cód. Domínio</label>
+            <input type="text" class="form-control form-control-sm" id="cadCodigoDominio">
+          </div>
+          <div class="col-12">
+            <label class="small fw-bold">Sócios e Capital Social</label>
+            <textarea class="form-control form-control-sm" id="cadSocios" rows="2" placeholder="Ex: Sócio A (50%), Sócio B (50%). Capital: R$ 10.000,00"></textarea>
+          </div>
+          <div class="col-12">
+            <label class="small fw-bold text-muted">Observações</label>
+            <textarea class="form-control form-control-sm" id="cadObs" rows="2"></textarea>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer py-2">
+        <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button class="btn btn-sm btn-primary" style="background:var(--azul-contec);border-color:var(--azul-contec);" onclick="salvarEmpresa()">Salvar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+
+const firebaseConfig = {
+  apiKey: "AIzaSyALCcgmHQ3oiZVF3c57x95NGcvOnTfOlRg",
+  authDomain: "contec-contabil.firebaseapp.com",
+  projectId: "contec-contabil",
+  storageBucket: "contec-contabil.firebasestorage.app",
+  messagingSenderId: "964671347118",
+  appId: "1:964671347118:web:d0050fe65a1650fe08103f"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+/* =========================================================================
+   ESTRUTURA DO CHECKLIST — baseada no Manual do Analista Contábil (Domínio)
+   ========================================================================= */
+const SECOES = [
+  {
+    id: "documentos",
+    titulo: "1. Documentos recebidos (antes de abrir o Domínio)",
+    itens: [
+      "Fiscal — notas de entrada e saída",
+      "Fiscal — apuração dos impostos / SPED (quando aplicável)",
+      "DP — folha de pagamento",
+      "DP — pró-labore",
+      "DP — férias / 13º (quando houver)",
+      "DP — rescisões (quando houver)",
+      "DP — guias FGTS e INSS",
+      "Financeiro — extratos de todas as contas bancárias",
+      "Financeiro — aplicações financeiras",
+      "Financeiro — cartões de crédito",
+      "Financeiro — empréstimos e financiamentos",
+      "Financeiro — comprovantes de PIX / boletos pagos",
+      "Administrativo — contratos novos / compra de bens",
+      "Administrativo — distribuição de lucros / aumento de capital",
+      "Administrativo — parcelamentos"
+    ]
+  },
+  {
+    id: "integracoes",
+    titulo: "2. Integrações (Fiscal e Folha → Contábil)",
+    itens: [
+      "Fiscal integrado: Receitas",
+      "Fiscal integrado: Compras",
+      "Fiscal integrado: Clientes",
+      "Fiscal integrado: Fornecedores",
+      "Fiscal integrado: Tributos (ICMS/PIS/COFINS/ISS/IPI)",
+      "Fiscal integrado: Estoque (quando configurado)",
+      "Folha integrada: Salários",
+      "Folha integrada: Pró-labore",
+      "Folha integrada: Férias / 13º",
+      "Folha integrada: Rescisões",
+      "Folha integrada: FGTS",
+      "Folha integrada: INSS",
+      "Folha integrada: Provisões (quando a empresa utilizar)",
+      "Balancete preliminar emitido (antes de qualquer ajuste)"
+    ]
+  },
+  {
+    id: "extrato",
+    titulo: "3. Análise do extrato bancário (linha a linha)",
+    itens: [
+      "Todos os PIX identificados (cliente, fornecedor ou outro)",
+      "Todas as TED/DOC possuem origem identificada",
+      "Tarifas bancárias lançadas",
+      "Juros bancários lançados",
+      "IOF identificado e lançado",
+      "Rendimentos de aplicação lançados (bruto + IRRF a Compensar)",
+      "Resgates de aplicação conferidos (atenção a IOF regressivo <30 dias)",
+      "Transferências entre contas da própria empresa eliminadas",
+      "Pagamentos de fornecedores baixados (sem nova despesa)",
+      "Salários baixados (sem nova despesa)",
+      "Pró-labore baixado (sem nova despesa)",
+      "FGTS baixado (sem nova despesa)",
+      "INSS baixado (sem nova despesa)",
+      "DARFs baixados (PIS/COFINS/IRPJ/CSLL/IRRF)",
+      "Compras de imobilizado identificadas (não lançar como despesa)",
+      "Empréstimos: parcela separada em Principal x Juros"
+    ]
+  },
+  {
+    id: "manuais",
+    titulo: "4. Lançamentos manuais recorrentes",
+    itens: [
+      "Depreciação do mês calculada e lançada",
+      "Amortização (quando aplicável)",
+      "Juros de empréstimos/financiamentos contabilizados",
+      "Integralização de capital (se houve, com documentação)",
+      "Distribuição de lucros / dividendos (se houve, com documentação)",
+      "Adiantamento a sócio classificado corretamente",
+      "Provisões e ajustes de exercícios anteriores (quando cabível)",
+      "Rateios do mês lançados (quando aplicável)"
+    ]
+  },
+  {
+    id: "analise",
+    titulo: '5. Análise do balancete final ("faz sentido?")',
+    itens: [
+      "Banco: saldo contábil bate com extrato",
+      "Caixa: saldo faz sentido para o porte da empresa",
+      "Clientes: igual ao financeiro / contas a receber",
+      "Fornecedores: igual ao contas a pagar",
+      "Estoque: variação coerente com vendas/compras",
+      "Imobilizado: depreciação do mês refletida",
+      "Tributos: batem com as guias pagas",
+      "Folha: resumo bate com os lançamentos integrados",
+      "Empréstimos: saldo bate com contrato; juros em despesa",
+      "Receita: compatível com o Fiscal do período",
+      "Despesas: nenhuma conta relevante zerada sem explicação"
+    ]
+  },
+  {
+    id: "fechamento",
+    titulo: "6. Fechamento da competência",
+    itens: [
+      "Balancete final emitido",
+      "DRE revisada (resultado coerente com histórico)",
+      "Balanço emitido",
+      "Razão e Diário conferidos/salvos",
+      "Plano Referencial conferido (contas novas vinculadas)",
+      "Arquivos da competência organizados na pasta"
+    ]
+  }
+];
+
+const CONTAS_CONCILIACAO = [
+  "Banco","Caixa","Clientes","Fornecedores","Tributos (FGTS/INSS/ICMS/PIS/COFINS)",
+  "Folha","Empréstimos","Aplicações","Imobilizado","Patrimônio Líquido"
+];
+
+/* =========================================================================
+   ESTADO
+   ========================================================================= */
+let empresas = [];              // [{id, nome, regime, cnpj, responsavel, obs}]
+let checklistsResumo = {};      // { empresaId: {progresso, pendentes, statusGeral} } para a competência atual
+let empresaAtual = null;
+let checklistAtualRef = null;
+let checklistAtualData = null;
+let salvarTimeout = null;
+let unsubEmpresas = null;
+let unsubResumo = {};
+
+function competenciaAtual(){
+  return document.getElementById("competencia").value || mesAtualPadrao();
+}
+function mesAtualPadrao(){
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+}
+
+/* =========================================================================
+   AUTENTICAÇÃO
+   ========================================================================= */
+document.getElementById("formLogin").addEventListener("submit", function(e){
+  e.preventDefault();
+  const email = document.getElementById("loginEmail").value.trim();
+  const senha = document.getElementById("loginSenha").value;
+  const erroEl = document.getElementById("loginErro");
+  erroEl.textContent = "";
+  auth.signInWithEmailAndPassword(email, senha).catch(err=>{
+    erroEl.textContent = "Não foi possível entrar. Confira e-mail e senha.";
+    console.error(err);
+  });
+});
+
+function sair(){ auth.signOut(); }
+
+auth.onAuthStateChanged(function(user){
+  if(user){
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("appScreen").style.display = "block";
+    document.getElementById("userEmailDisplay").innerHTML = '<i class="fa-solid fa-circle-user"></i> ' + user.email;
+    document.getElementById("competencia").value = mesAtualPadrao();
+    iniciarListenersEmpresas();
+  } else {
+    document.getElementById("loginScreen").style.display = "flex";
+    document.getElementById("appScreen").style.display = "none";
+    if(unsubEmpresas) unsubEmpresas();
+    Object.values(unsubResumo).forEach(fn=>fn && fn());
+  }
+});
+
+/* =========================================================================
+   LISTENERS EM TEMPO REAL — EMPRESAS
+   ========================================================================= */
+function iniciarListenersEmpresas(){
+  if(unsubEmpresas) unsubEmpresas();
+  unsubEmpresas = db.collection("empresas").orderBy("nome").onSnapshot(function(snap){
+    empresas = snap.docs.map(d => Object.assign({id:d.id}, d.data()));
+    ligarListenersResumoChecklist();
+    renderizarTabela();
+  });
+}
+
+function ligarListenersResumoChecklist(){
+  const comp = competenciaAtual();
+  Object.values(unsubResumo).forEach(fn=>fn && fn());
+  unsubResumo = {};
+  empresas.forEach(function(emp){
+    const docId = emp.id + "_" + comp;
+    unsubResumo[emp.id] = db.collection("checklists").doc(docId).onSnapshot(function(doc){
+      checklistsResumo[emp.id] = resumirChecklist(doc.exists ? doc.data() : null);
+      renderizarTabela();
+    });
+  });
+}
+
+document.getElementById("competencia").addEventListener("change", function(){
+  ligarListenersResumoChecklist();
+  if(empresaAtual) abrirChecklist(empresaAtual.id);
+});
+
+function totalItensChecklist(){
+  return SECOES.reduce((s,sec)=>s+sec.itens.length,0);
+}
+
+function resumirChecklist(data) {
+
+  const totalFixos = SECOES.reduce((s, sec) => s + sec.itens.length, 0);
+  
+  let totalCustom = 0;
+  if (data && data.customItens) {
+    Object.values(data.customItens).forEach(lista => {
+      totalCustom += lista.length;
+    });
+  }
+  
+  const total = totalFixos + totalCustom;
+
+  if (!data || !data.itens) {
+    return { ok: 0, total, pendentes: total, statusGeral: (data && data.statusGeral) || "Não iniciado" };
+  }
+
+  let ok = 0;
+
+  SECOES.forEach(sec => {
+    sec.itens.forEach((_, i) => {
+      if (data.itens[sec.id + "_" + i] === "ok") ok++;
+    });
+  });
+
+  if (data.customItens) {
+    Object.entries(data.customItens).forEach(([secId, lista]) => {
+      lista.forEach((_, i) => {
+        if (data.itens[secId + "_cust_" + i] === "ok") ok++;
+      });
+    });
+  }
+
+  const pendentes = total - ok;
+  return { ok, total, pendentes, statusGeral: data.statusGeral || "Não iniciado" };
+}
+
+/* =========================================================================
+   RENDERIZAÇÃO — LISTA DE EMPRESAS
+   ========================================================================= */
+function renderizarTabela(){
+  const corpo = document.getElementById("corpoTabelaEmpresas");
+  const busca = document.getElementById("buscaEmpresa").value.toLowerCase();
+  const filtroStatus = document.getElementById("filtroStatus").value;
+  corpo.innerHTML = "";
+
+  const lista = empresas.filter(emp=>{
+    const texto = (emp.nome+" "+(emp.cnpj||"")+" "+(emp.responsavel||"")).toLowerCase();
+    if(busca && !texto.includes(busca)) return false;
+    const resumo = checklistsResumo[emp.id] || {statusGeral:"Não iniciado"};
+    if(filtroStatus!=="TODOS" && resumo.statusGeral!==filtroStatus) return false;
+    return true;
+  });
+
+
+  document.getElementById("estadoVazio").style.display = empresas.length===0 ? "block" : "none";
+
+  let somaOk=0, somaTotal=0;
+  lista.forEach(emp => {
+    // 1. Lógica das Bolinhas (resumo anual)
+    // Buscamos o resumo do ano atual (2026)
+    const resumo = emp.resumoAnual ? emp.resumoAnual["2026"] || {} : {}; 
+  let htmlMeses = "";
+
+  for (let m = 1; m <= 12; m++) {
+    // Forçamos a comparação de strings (ex: "1" === "1")
+    const isFechado = resumo[String(m)] === true;
+    const classe = isFechado ? "badge-mes fechado" : "badge-mes";
+    htmlMeses += `<span class="${classe}">${m}</span>`;
+  }
+
+    // 2. Montagem da linha (tr)
+    const r = checklistsResumo[emp.id] || {ok:0, total:totalItensChecklist(), pendentes:totalItensChecklist(), statusGeral:"Não iniciado"};
+    const pct = r.total ? Math.round((r.ok/r.total)*100) : 0;
+    const regimeClasse = emp.regime==="SN" ? "badge-sn" : emp.regime==="LP" ? "badge-lp" : "badge-real";
+    const regimeLabel = emp.regime==="SN" ? "Simples" : emp.regime==="LP" ? "Presumido" : "Real";
+    const statusClasse = {"Fechado":"chip-fechado","Em andamento":"chip-andamento","Não iniciado":"chip-naoiniciado","Aguardando cliente":"chip-aguardando"}[r.statusGeral] || "chip-naoiniciado";
+
+    const tr = document.createElement("tr");
+    tr.onclick = ()=>abrirChecklist(emp.id);
+   tr.innerHTML = `
+      <td style="text-align:left;">
+        <div class="fw-bold">${emp.nome}</div>
+        <div class="text-muted" style="font-size:.72rem;">${emp.cnpj||""} · Domínio: ${emp.codigoDominio||"-"}</div>
+      </td>
+      <td><span class="badge-regime ${regimeClasse}">${regimeLabel}</span></td>
+      <td>${htmlMeses}</td>
+      <td>
+        <div class="d-flex align-items-center gap-2">
+          <div class="mini-progress"><div style="width:${pct}%"></div></div>
+          <span class="small fw-bold">${pct}%</span>
+        </div>
+      </td>
+      <td>${r.pendentes>0 ? `<span class="pend-badge">${r.pendentes}</span>` : `<span class="text-success"><i class="fa-solid fa-circle-check"></i></span>`}</td>
+      <td><span class="status-chip ${statusClasse}">${r.statusGeral}</span></td>
+      <td>
+        <button class="btn btn-sm btn-action" onclick="event.stopPropagation(); editarEmpresa('${emp.id}')"><i class="fa-solid fa-pencil"></i></button>
+        <button class="btn btn-sm btn-action text-danger" onclick="event.stopPropagation(); excluirEmpresa('${emp.id}')"><i class="fa-solid fa-trash"></i></button>
+      </td>
+    `;
+    corpo.appendChild(tr);
+  });
+ 
+
+  const pctGeral = somaTotal ? Math.round((somaOk/somaTotal)*100) : 0;
+  document.getElementById("barraProgresso").style.width = pctGeral+"%";
+  document.getElementById("barraProgresso").textContent = pctGeral+"%";
+  document.getElementById("progressoTexto").textContent = pctGeral+"% ("+somaOk+"/"+somaTotal+" itens)";
+}
+
+/* =========================================================================
+   CADASTRO DE EMPRESA
+   ========================================================================= */
+function abrirModalEmpresa() {
+    document.getElementById("editEmpresaId").value = ""; // Limpa o ID
+    document.getElementById("formEmpresaCad").reset();   // Limpa os inputs
+    new bootstrap.Modal(document.getElementById("modalEmpresa")).show();
+}
+
+function salvarEmpresa() {
+    const id = document.getElementById("editEmpresaId").value;
+    const nome = document.getElementById("cadNome").value.trim();
+    
+    if (!nome) { alert("Informe o nome da empresa."); return; }
+
+    const dados = {
+        nome: nome,
+        regime: document.getElementById("cadRegime").value,
+        cnpj: document.getElementById("cadCnpj").value.trim(),
+        codigoDominio: document.getElementById("cadCodigoDominio").value.trim(),
+        socios: document.getElementById("cadSocios").value.trim(),
+        obs: document.getElementById("cadObs").value.trim()
+    };
+
+    if (id) {
+        // Atualiza empresa existente
+        db.collection("empresas").doc(id).update(dados)
+            .then(() => bootstrap.Modal.getInstance(document.getElementById("modalEmpresa")).hide())
+            .catch(err => alert("Erro ao atualizar: " + err.message));
+    } else {
+        // Cria nova empresa
+        dados.criadoEm = firebase.firestore.FieldValue.serverTimestamp();
+        db.collection("empresas").add(dados)
+            .then(() => {
+                document.getElementById("formEmpresaCad").reset();
+                bootstrap.Modal.getInstance(document.getElementById("modalEmpresa")).hide();
+            })
+            .catch(err => alert("Erro ao salvar: " + err.message));
+    }
+}
+
+/* =========================================================================
+   CHECKLIST DA EMPRESA
+   ========================================================================= */
+function voltarParaLista(){
+  document.getElementById("viewChecklist").style.display = "none";
+  document.getElementById("viewEmpresas").style.display = "block";
+  empresaAtual = null;
+}
+
+function abrirChecklist(empresaId){
+  const emp = empresas.find(e=>e.id===empresaId);
+  if(!emp) return;
+  empresaAtual = emp;
+  document.getElementById("viewEmpresas").style.display = "none";
+  document.getElementById("viewChecklist").style.display = "block";
+  document.getElementById("chkEmpresaNome").textContent = emp.nome;
+  document.getElementById("chkEmpresaSub").textContent =
+    (emp.cnpj?emp.cnpj+" · ":"") + "Competência " + competenciaAtual() + (emp.responsavel?" · "+emp.responsavel:"");
+
+  const docId = emp.id + "_" + competenciaAtual();
+  checklistAtualRef = db.collection("checklists").doc(docId);
+
+  checklistAtualRef.onSnapshot(function(doc){
+    checklistAtualData = doc.exists ? doc.data() : {itens:{}, conciliacao:{}, statusGeral:"Não iniciado", observacoesGerais:""};
+    document.getElementById("chkStatusGeral").value = checklistAtualData.statusGeral || "Não iniciado";
+    renderizarSecoes();
+    marcarSalvo();
+  });
+}
+
+// Adicionar novo item
+function adicionarItem(secId) {
+    const nome = prompt("Nome da nova tarefa:");
+    if (!nome) return;
+    // Lógica: busca a seção pelo secId, dá um push no array de itens, e salva no Firestore
+}
+
+// Excluir item
+function excluirItem(secId, index) {
+    if (!confirm("Deseja realmente excluir este item?")) return;
+    // Lógica: remove o item do array na posição index e atualiza o Firestore
+}
+
+// Editar item
+function editarItem(secId, index) {
+    const novoNome = prompt("Renomear tarefa:", "Nome atual");
+    if (!novoNome) return;
+    // Lógica: substitui o texto do item no array e atualiza o Firestore
+}
+
+function renderizarSecoes() {
+  const cont = document.getElementById("secoesChecklist");
+  cont.innerHTML = "";
+
+  SECOES.forEach(sec => {
+    const itensData = (checklistAtualData && checklistAtualData.itens) || {};
+    const customItens = (checklistAtualData.customItens && checklistAtualData.customItens[sec.id]) || [];
+    
+    let okCount = 0;
+    sec.itens.forEach((_, i) => { if (itensData[sec.id + "_" + i] === "ok") okCount++; });
+    customItens.forEach((_, i) => { if (itensData[sec.id + "_cust_" + i] === "ok") okCount++; });
+
+    const totalItens = sec.itens.length + customItens.length;
+
+    const card = document.createElement("div");
+    card.className = "section-card";
+    let html = `<div class="section-title"><span>${sec.titulo}</span><span class="sec-progress">${okCount}/${totalItens}</span></div>`;
+    
+    // 1. Renderiza itens FIXOS
+    sec.itens.forEach((texto, i) => {
+      const key = sec.id + "_" + i;
+      const status = itensData[key] || "pendente";
+      const obs = ((checklistAtualData.observacoes || {})[key]) || "";
+      html += `
+        <div class="item-row">
+          <button class="status-toggle ${status}" onclick="alternarStatus('${sec.id}', '${i}', false)">${rotuloStatus(status)}</button>
+          <span class="item-text">${texto}</span>
+          <button class="btn-action" onclick="editarItem('${sec.id}', ${i}, false, '${texto}')"><i class="fa-solid fa-pencil"></i></button>
+          <button class="btn-action" onclick="excluirItem('${sec.id}', ${i}, false)"><i class="fa-solid fa-trash"></i></button>
+          <input type="text" class="obs-input" placeholder="observação..." value="${obs.replace(/"/g, '&quot;')}" onchange="salvarObsItem('${sec.id}', '${i}', this.value)">
+        </div>`;
+    });
+
+    // 2. Renderiza itens CUSTOMIZADOS
+    customItens.forEach((texto, i) => {
+      const key = sec.id + "_cust_" + i;
+      const status = itensData[key] || "pendente";
+      const obs = ((checklistAtualData.observacoes || {})[key]) || "";
+      html += `
+        <div class="item-row">
+          <button class="status-toggle ${status}" onclick="alternarStatus('${sec.id}', '${i}', true)">${rotuloStatus(status)}</button>
+          <span class="item-text">${texto}</span>
+          <button class="btn-action" onclick="editarItem('${sec.id}', ${i}, true, '${texto}')"><i class="fa-solid fa-pencil"></i></button>
+          <button class="btn-action" onclick="excluirItem('${sec.id}', ${i}, true)"><i class="fa-solid fa-trash"></i></button>
+          <input type="text" class="obs-input" placeholder="observação..." value="${obs.replace(/"/g, '&quot;')}" onchange="salvarObsItem('${sec.id}', 'cust_${i}', this.value)">
+        </div>`;
+    });
+
+    html += `<div class="p-2 text-end"><button class="btn-add-item" onclick="adicionarItem('${sec.id}')">+ Adicionar Campo</button></div>`;
+    card.innerHTML = html;
+    cont.appendChild(card);
+  });
+
+  // Conciliação de contas
+  const conc = (checklistAtualData && checklistAtualData.conciliacao) || {};
+  const concCard = document.createElement("div");
+  concCard.className = "section-card";
+  let concHtml = `<div class="section-title"><span>7. Conciliação de contas (ordem recomendada)</span></div>`;
+  concHtml += `<div class="conc-row head"><div>Conta</div><div>Saldo contábil</div><div>Saldo documento</div><div>Diferença</div><div>Status</div><div>Observação</div></div>`;
+  CONTAS_CONCILIACAO.forEach((conta,i)=>{
+    const key = "conc_"+i;
+    const linha = conc[key] || {};
+    const sc = linha.saldoContabil ?? "";
+    const sd = linha.saldoDocumento ?? "";
+    const dif = (sc!=="" && sd!=="") ? (parseFloat(sc)-parseFloat(sd)) : null;
+    const difClasse = dif===null ? "" : (Math.abs(dif)<0.005 ? "zero" : "dif");
+    const difTexto = dif===null ? "-" : dif.toLocaleString("pt-BR",{minimumFractionDigits:2});
+    concHtml += `
+      <div class="conc-row">
+        <div class="fw-bold">${i+1}. ${conta}</div>
+        <div><input type="number" step="0.01" value="${sc}" onchange="salvarConciliacao(${i},'saldoContabil',this.value)"></div>
+        <div><input type="number" step="0.01" value="${sd}" onchange="salvarConciliacao(${i},'saldoDocumento',this.value)"></div>
+        <div class="conc-diff ${difClasse}">${difTexto}</div>
+        <div>
+          <select class="form-select form-select-sm" onchange="salvarConciliacao(${i},'status',this.value)">
+            <option value="Pendente" ${linha.status==="Pendente"||!linha.status?"selected":""}>Pendente</option>
+            <option value="OK" ${linha.status==="OK"?"selected":""}>OK</option>
+            <option value="N/A" ${linha.status==="N/A"?"selected":""}>N/A</option>
+          </select>
+        </div>
+        <div><input type="text" class="obs-input" style="width:100%;" value="${(linha.obs||"").replace(/"/g,'&quot;')}" onchange="salvarConciliacao(${i},'obs',this.value)"></div>
+      </div>`;
+  });
+  concCard.innerHTML = concHtml;
+  cont.appendChild(concCard);
+
+  // Observações gerais
+  const obsCard = document.createElement("div");
+  obsCard.className = "section-card";
+  obsCard.innerHTML = `
+    <div class="section-title"><span>8. Observações gerais / pendências desta empresa</span></div>
+    <div class="p-3">
+      <textarea class="form-control form-control-sm" rows="3" placeholder="Ex: aguardando extrato do Banco X; confirmar rescisão com o cliente..."
+        onchange="salvarObsGerais(this.value)">${checklistAtualData.observacoesGerais||""}</textarea>
+    </div>`;
+  cont.appendChild(obsCard);
+}
+
+function rotuloStatus(s){
+  return s==="ok" ? '<i class="fa-solid fa-check"></i> OK' : s==="na" ? "N/A" : "Pendente";
+}
+
+function alternarStatus(secId, i, isCustom) {
+  const key = isCustom ? (secId + "_cust_" + i) : (secId + "_" + i);
+  const atual = (checklistAtualData.itens && checklistAtualData.itens[key]) || "pendente";
+  const proximo = atual==="pendente" ? "ok" : atual==="ok" ? "na" : "pendente";
+  if(!checklistAtualData.itens) checklistAtualData.itens = {};
+  checklistAtualData.itens[key] = proximo;
+  salvarChecklist();
+  renderizarSecoes();
+}
+
+function salvarObsItem(secId, i, valor, isCustom){
+  const key = isCustom ? (secId + "_cust_" + i) : (secId + "_" + i);
+  if(!checklistAtualData.observacoes) checklistAtualData.observacoes = {};
+  checklistAtualData.observacoes[key] = valor;
+  salvarChecklist();
+}
+
+function salvarConciliacao(i, campo, valor){
+  const key = "conc_"+i;
+  if(!checklistAtualData.conciliacao) checklistAtualData.conciliacao = {};
+  if(!checklistAtualData.conciliacao[key]) checklistAtualData.conciliacao[key] = {};
+  checklistAtualData.conciliacao[key][campo] = valor;
+  salvarChecklist();
+  renderizarSecoes();
+}
+
+function salvarObsGerais(valor){
+  checklistAtualData.observacoesGerais = valor;
+  salvarChecklist();
+}
+
+function salvarStatusGeral() {
+  const novoStatus = document.getElementById("chkStatusGeral").value;
+  checklistAtualData.statusGeral = novoStatus;
+  
+  salvarChecklist(); 
+  
+
+  atualizarResumoAnual(empresaAtual.id, competenciaAtual(), novoStatus);
+}
+
+function salvarChecklist(){
+  if(!checklistAtualRef) return;
+  marcarSalvando();
+  clearTimeout(salvarTimeout);
+  salvarTimeout = setTimeout(()=>{
+    checklistAtualRef.set(Object.assign({}, checklistAtualData, {
+      empresaId: empresaAtual.id,
+      competencia: competenciaAtual(),
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    }), {merge:true}).then(marcarSalvo).catch(err=>console.error(err));
+  }, 400);
+}
+
+function atualizarResumoAnual(empresaId, competencia, status) {
+    // Exemplo: competencia = "2026-07"
+    const partes = competencia.split("-");
+    const ano = partes[0]; 
+    const mes = parseInt(partes[1]); // Converte para número (ex: 7)
+    
+    // O comando 'set' com 'merge: true' criará o campo se ele não existir
+    db.collection("empresas").doc(empresaId).set({
+        resumoAnual: {
+            [ano]: {
+                [mes]: (status === "Fechado") // Salva true ou false
+            }
+        }
+    }, { merge: true })
+    .then(() => console.log("Resumo atualizado com sucesso!"))
+    .catch((err) => console.error("Erro ao atualizar resumo: ", err));
+}
+
+function marcarSalvando(){
+  const el = document.getElementById("saveIndicator");
+  el.className = "save-indicator saving";
+  el.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> Salvando...';
+}
+function marcarSalvo(){
+  const el = document.getElementById("saveIndicator");
+  el.className = "save-indicator";
+  el.innerHTML = '<i class="fa-solid fa-check"></i> Salvo';
+}
+
+function adicionarItem(secId) {
+    const nome = prompt("Nome da nova tarefa:");
+    if (!nome) return;
+    if (!checklistAtualData.customItens) checklistAtualData.customItens = {};
+    if (!checklistAtualData.customItens[secId]) checklistAtualData.customItens[secId] = [];
+    
+    checklistAtualData.customItens[secId].push(nome);
+    salvarChecklist();
+    renderizarSecoes();
+}
+
+function excluirItem(secId, index, isCustom) {
+    if (!confirm("Excluir este item?")) return;
+    // Remove do array de customizados
+    if (isCustom) {
+        checklistAtualData.customItens[secId].splice(index, 1);
+    }
+    salvarChecklist();
+    renderizarSecoes();
+}
+
+function editarItem(secId, index, isCustom, textoAtual) {
+    const novoNome = prompt("Renomear tarefa:", textoAtual);
+    if (!novoNome) return;
+    if (isCustom) {
+        checklistAtualData.customItens[secId][index] = novoNome;
+    }
+    salvarChecklist();
+    renderizarSecoes();
+}
+
+// Abrir modal para editar
+function editarEmpresa(empresaId) {
+    // Busca os dados da empresa na sua lista local
+    const emp = empresas.find(e => e.id === empresaId);
+    if (!emp) return;
+
+    // Preenche o formulário
+    document.getElementById("editEmpresaId").value = emp.id;
+    document.getElementById("cadNome").value = emp.nome;
+    document.getElementById("cadRegime").value = emp.regime;
+    document.getElementById("cadCnpj").value = emp.cnpj || "";
+    document.getElementById("cadCodigoDominio").value = emp.codigoDominio || "";
+    document.getElementById("cadSocios").value = emp.socios || "";
+    document.getElementById("cadObs").value = emp.obs || "";
+
+    // Abre o modal
+    new bootstrap.Modal(document.getElementById("modalEmpresa")).show();
+}
+
+// Botão de Excluir
+function excluirEmpresa(id) {
+    if(confirm("Tem certeza que deseja excluir esta empresa? Todos os dados serão perdidos.")) {
+        db.collection("empresas").doc(id).delete();
+    }
+}
+
+async function fazerBackup() {
+    try {
+        // 1. Busca empresas
+        const snapEmpresas = await db.collection("empresas").get();
+        const empresas = snapEmpresas.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // 2. Busca checklists
+        const snapChecklists = await db.collection("checklists").get();
+        const checklists = snapChecklists.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+        // 3. Monta um objeto único com ambas as coleções
+        const backupCompleto = {
+            dataBackup: new Date().toISOString(),
+            empresas: empresas,
+            checklists: checklists
+        };
+
+        // 4. Gera o arquivo JSON
+        const blob = new Blob([JSON.stringify(backupCompleto, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `backup_completo_contec_${new Date().toISOString().slice(0,10)}.json`;
+        a.click();
+        
+        alert("Backup completo (Empresas + Checklists) realizado!");
+    } catch (error) {
+        console.error("Erro no backup:", error);
+        alert("Erro ao realizar backup.");
+    }
+}
+
+async function restaurarBackupCompleto(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!confirm("ATENÇÃO: Esta ação irá importar dados de Empresas e Checklists. Deseja continuar?")) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const dados = JSON.parse(e.target.result);
+            const batch = db.batch(); // Usamos batch para salvar tudo de uma vez de forma segura
+
+            // 1. Processa Empresas
+            if (dados.empresas) {
+                dados.empresas.forEach(emp => {
+                    const ref = db.collection("empresas").doc(emp.id);
+                    batch.set(ref, emp);
+                });
+            }
+
+            // 2. Processa Checklists
+            if (dados.checklists) {
+                dados.checklists.forEach(chk => {
+                    const ref = db.collection("checklists").doc(chk.id);
+                    batch.set(ref, chk);
+                });
+            }
+
+            // 3. Executa a gravação no banco
+            await batch.commit();
+            alert("Restauração de Empresas e Checklists concluída com sucesso!");
+            location.reload();
+        } catch (error) {
+            console.error("Erro ao restaurar:", error);
+            alert("Erro ao restaurar o backup. Verifique se o arquivo é válido.");
+        }
+    };
+    reader.readAsText(file);
+}
+</script>
+</body>
+</html>
