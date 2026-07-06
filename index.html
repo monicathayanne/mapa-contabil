@@ -707,7 +707,7 @@ document.getElementById("formLogin").addEventListener("submit", function(e){
 function sair(){ auth.signOut(); }
 
 auth.onAuthStateChanged(function(user){
-  if(user){
+    if(user){
     document.getElementById("loginScreen").style.display = "none";
     document.getElementById("appScreen").style.display = "block";
     document.getElementById("userEmailDisplay").innerHTML = '<i class="fa-solid fa-circle-user"></i> ' + user.email;
@@ -720,6 +720,7 @@ auth.onAuthStateChanged(function(user){
     if(unsubEmpresas) unsubEmpresas(); if(unsubConsulta) unsubConsulta();
     Object.values(unsubResumo).forEach(fn=>fn && fn());
   }
+  
 });
 
 /* =========================================================================
