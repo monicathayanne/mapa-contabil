@@ -355,11 +355,11 @@ table#tabelaEmpresas td{vertical-align:middle;font-size:.83rem;}
             <tr>
               <th style="text-align:left;">Empresa</th>
               <th>Regime</th>
-              <th>Competências Fechadas</th> <!-- Nova coluna -->
+              <th>Competências Fechadas</th> 
               <th>Progresso do checklist</th>
               <th>Pendências</th>
               <th>Status</th>
-              <th>Ações</th> <!-- Nova coluna -->
+              <th>Ações</th> 
             </tr>
           </thead>
           <tbody id="corpoTabelaEmpresas"></tbody>
@@ -477,9 +477,9 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-/* =========================================================================
-   ESTRUTURA DO CHECKLIST — baseada no Manual do Analista Contábil (Domínio)
-   ========================================================================= */
+/* ========================
+   ESTRUTURA DO CHECKLIST
+   ======================== */
 const SECOES = [
   {
     id: "documentos",
