@@ -1373,6 +1373,71 @@ function exportarChecklistExcel(){
    Para adicionar um novo caso, copie um objeto do array e ajuste os campos.
 ========================================================================= */
 const CONSULTA_CONTABIL_BASE = [
+  
+  {
+    titulo: "Pagamento de Energia Elétrica",
+    termos: ["energia eletrica", "conta de luz", "despesa de energia"],
+    debito: "Despesas com Energia Elétrica (Resultado)",
+    credito: "Caixa ou Bancos (Ativo Circulante)",
+    explicacao: "Reconhecimento da despesa de consumo de energia no momento do pagamento (ou após provisão).",
+    exemplo: "Ex: conta de R$1.782,34 → Débito: Despesas com Energia R$1.782,34 / Crédito: Bancos R$1.782,34."
+  },
+  {
+    titulo: "Rendimento de aplicação financeira",
+    termos: ["rendimento", "juros", "aplicacao"],
+    debito: "Aplicações Financeiras (Ativo Circulante)",
+    credito: "Receitas Financeiras (Resultado)",
+    explicacao: "Registro do ganho na aplicação (aumento do ativo) reconhecido como receita.",
+    exemplo: "Ex: rendimento de R$0,05 → Débito: Aplicações Financeiras R$0,05 / Crédito: Receitas Financeiras R$0,05."
+  },
+  {
+    titulo: "Pagamento de Impostos e Contribuições (DARF, INSS, FGTS, DAS)",
+    termos: ["darf", "inss", "fgts", "simples nacional", "impostos"],
+    debito: "Tributos a Recolher / INSS a Recolher / FGTS a Recolher (Passivo Circulante)",
+    credito: "Caixa ou Bancos (Ativo Circulante)",
+    explicacao: "Baixa da obrigação tributária provisionada anteriormente contra a saída do banco.",
+    exemplo: "Ex: pagamento de guia DAS → Débito: Simples Nacional a Recolher / Crédito: Bancos."
+  },
+  {
+    titulo: "Pagamento de Salários, Autônomos e Pró-labore",
+    termos: ["salarios", "autonomos", "pro labore", "folha"],
+    debito: "Salários a Pagar / Pró-labore a Pagar (Passivo Circulante)",
+    credito: "Caixa ou Bancos (Ativo Circulante)",
+    explicacao: "Liquidação da obrigação com o pessoal após o fechamento da folha.",
+    exemplo: "Ex: pagamento de salário líquido → Débito: Salários a Pagar / Crédito: Bancos."
+  },
+  {
+    titulo: "Pagamento de Fornecedores",
+    termos: ["pagamento fornecedor", "baixa fornecedor"],
+    debito: "Fornecedores a Pagar (Passivo Circulante)",
+    credito: "Caixa ou Bancos (Ativo Circulante)",
+    explicacao: "Baixa da dívida registrada na aquisição de mercadorias ou serviços.",
+    exemplo: "Ex: pagamento de duplicata → Débito: Fornecedores a Pagar / Crédito: Bancos."
+  },
+  {
+    titulo: "Aporte/Adiantamento de sócios",
+    termos: ["aporte", "adiantamento socio", "mutuo"],
+    debito: "Caixa ou Bancos (Ativo Circulante)",
+    credito: "Empréstimos de Sócios ou AFAC (Passivo/PL)",
+    explicacao: "Entrada de recursos na empresa, que gera uma obrigação com o sócio ou adiantamento para capital.",
+    exemplo: "Ex: aporte de R$1.000 → Débito: Bancos R$1.000 / Crédito: Empréstimos de Sócios R$1.000."
+  },
+  {
+    titulo: "IOF e Encargos Bancários",
+    termos: ["iof", "tarifas bancarias", "despesas financeiras"],
+    debito: "Despesas Bancárias / IOF (Resultado)",
+    credito: "Caixa ou Bancos (Ativo Circulante)",
+    explicacao: "Reconhecimento das taxas e impostos sobre operações financeiras como despesa do período.",
+    exemplo: "Ex: cobrança de IOF → Débito: Despesas com IOF / Crédito: Bancos."
+  },
+  {
+    titulo: "Aplicação Financeira (Resgate)",
+    termos: ["resgate", "aplicacao"],
+    debito: "Caixa ou Bancos (Ativo Circulante)",
+    credito: "Aplicações Financeiras (Ativo Circulante)",
+    explicacao: "Transferência de valores da conta de aplicação para a conta corrente (resgate do principal).",
+    exemplo: "Ex: resgate de R$1.000 → Débito: Bancos R$1.000 / Crédito: Aplicações Financeiras R$1.000."
+  },
   {
     titulo: "Receita financeira (rendimento de aplicação)",
     termos: ["receita financeira","rendimento","aplicacao financeira","juros recebidos","cdb","poupanca"],
