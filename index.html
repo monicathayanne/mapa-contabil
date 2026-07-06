@@ -713,6 +713,7 @@ auth.onAuthStateChanged(function(user){
     document.getElementById("userEmailDisplay").innerHTML = '<i class="fa-solid fa-circle-user"></i> ' + user.email;
     document.getElementById("competencia").value = mesAtualPadrao();
     iniciarListenersEmpresas();
+    iniciarListenerConsulta();
   } else {
     document.getElementById("loginScreen").style.display = "flex";
     document.getElementById("appScreen").style.display = "none";
