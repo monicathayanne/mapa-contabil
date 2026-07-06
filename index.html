@@ -152,6 +152,48 @@ table#tabelaEmpresas td{vertical-align:middle;font-size:.83rem;}
     font-weight: 800;
 }
 
+.btn-consulta-flutuante{
+  position:fixed; bottom:24px; right:24px; z-index:1000;
+  width:56px; height:56px; border-radius:50%;
+  background:#7c3aed; color:#fff; border:none;
+  display:flex; align-items:center; justify-content:center;
+  font-size:1.3rem; box-shadow:0 4px 14px rgba(124,58,237,.45);
+  cursor:pointer; transition:transform .15s ease;
+}
+.btn-consulta-flutuante:hover{ transform:scale(1.08); background:#6d28d9; }
+
+.consulta-overlay{
+  position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1100;
+  display:none; align-items:flex-start; justify-content:center; padding-top:6vh;
+}
+.consulta-overlay.aberto{ display:flex; }
+.consulta-box{
+  background:#fff; border-radius:10px; width:92%; max-width:640px;
+  max-height:82vh; display:flex; flex-direction:column; overflow:hidden;
+  box-shadow:0 12px 40px rgba(0,0,0,.25);
+}
+.consulta-box-header{
+  padding:16px 18px; border-bottom:1px solid #eee;
+  display:flex; align-items:center; gap:10px;
+}
+.consulta-box-header input{
+  flex:1; border:1px solid #ddd; border-radius:6px; padding:9px 12px; font-size:.95rem;
+}
+.consulta-box-header button{
+  border:none; background:none; font-size:1.2rem; color:#888; cursor:pointer;
+}
+.consulta-resultados{ overflow-y:auto; padding:8px 18px 18px; }
+.consulta-item{ border-bottom:1px solid #f0f0f0; padding:14px 0; }
+.consulta-item:last-child{ border-bottom:none; }
+.consulta-item h4{ font-size:.95rem; font-weight:800; color:var(--azul-contec,#1e2a78); margin:0 0 6px; }
+.consulta-item .lancamento{
+  display:flex; gap:16px; font-size:.82rem; margin-bottom:6px; flex-wrap:wrap;
+}
+.consulta-item .lancamento span b{ color:#7c3aed; }
+.consulta-item p{ font-size:.85rem; color:#555; margin:0 0 4px; }
+.consulta-item .exemplo{ font-size:.8rem; color:#777; font-style:italic; }
+.consulta-vazio{ text-align:center; color:#999; padding:30px 0; font-size:.9rem; }
+
 .section-card{background:#fff;border:1px solid #e3e5e8;border-radius:6px;margin-bottom:14px;overflow:hidden;}
 .section-card .section-title{background:var(--dourado-contec);color:#3a2e00;font-weight:800;font-size:.85rem;padding:9px 16px;display:flex;justify-content:space-between;align-items:center;letter-spacing:.3px;}
 .section-card .section-title .sec-progress{font-size:.7rem;font-weight:700;background:rgba(255,255,255,.55);padding:2px 8px;border-radius:20px;}
@@ -243,6 +285,34 @@ table#tabelaEmpresas td{vertical-align:middle;font-size:.83rem;}
 </style>
 </head>
 <body>
+
+  <button class="btn-consulta-flutuante" onclick="abrirConsulta()" title="Consulta rápida de lançamentos">
+  <i class="fa-solid fa-magnifying-glass"></i>
+</button>
+
+<div class="consulta-overlay" id="consultaOverlay" onclick="if(event.target===this) fecharConsulta()">
+  <div class="consulta-box">
+  <div class="consulta-box-header">
+  <input type="text" id="consultaInput" placeholder="Ex: fornecedores, receita financeira, ICMS..." oninput="buscarConsulta()">
+  <button onclick="abrirFormNovaConsulta()" title="Adicionar novo caso" style="color:#7c3aed;"><i class="fa-solid fa-plus"></i></button>
+  <button onclick="fecharConsulta()"><i class="fa-solid fa-xmark"></i></button>
+</div>
+
+<div id="consultaFormNovo" style="display:none; padding:14px 18px; border-bottom:1px solid #eee; background:#faf8ff;">
+  <input type="text" id="novoTitulo" placeholder="Título (ex: Adiantamento a fornecedores)" style="width:100%; margin-bottom:8px; padding:8px; border:1px solid #ddd; border-radius:6px;">
+  <input type="text" id="novoTermos" placeholder="Palavras-chave separadas por vírgula" style="width:100%; margin-bottom:8px; padding:8px; border:1px solid #ddd; border-radius:6px;">
+  <input type="text" id="novoDebito" placeholder="Conta de débito" style="width:100%; margin-bottom:8px; padding:8px; border:1px solid #ddd; border-radius:6px;">
+  <input type="text" id="novoCredito" placeholder="Conta de crédito" style="width:100%; margin-bottom:8px; padding:8px; border:1px solid #ddd; border-radius:6px;">
+  <textarea id="novoExplicacao" placeholder="Explicação" rows="2" style="width:100%; margin-bottom:8px; padding:8px; border:1px solid #ddd; border-radius:6px;"></textarea>
+  <input type="text" id="novoExemplo" placeholder="Exemplo prático" style="width:100%; margin-bottom:10px; padding:8px; border:1px solid #ddd; border-radius:6px;">
+  <div style="display:flex; gap:8px;">
+    <button onclick="salvarNovaConsulta()" style="background:#7c3aed; color:#fff; border:none; padding:8px 16px; border-radius:6px; font-weight:700;">Salvar</button>
+    <button onclick="fecharFormNovaConsulta()" style="background:none; border:1px solid #ccc; padding:8px 16px; border-radius:6px;">Cancelar</button>
+  </div>
+</div>
+    <div class="consulta-resultados" id="consultaResultados"></div>
+  </div>
+</div>
 
 <!-- ===================== LOGIN ===================== -->
 <div id="loginScreen">
@@ -477,6 +547,9 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+let unsubConsulta = null;
+let consultaFirestore = [];   // itens adicionados pelo botão, vindos do Firestore
+
 /* ========================
    ESTRUTURA DO CHECKLIST
    ======================== */
@@ -641,7 +714,7 @@ auth.onAuthStateChanged(function(user){
   } else {
     document.getElementById("loginScreen").style.display = "flex";
     document.getElementById("appScreen").style.display = "none";
-    if(unsubEmpresas) unsubEmpresas();
+    if(unsubEmpresas) unsubEmpresas(); if(unsubConsulta) unsubConsulta();
     Object.values(unsubResumo).forEach(fn=>fn && fn());
   }
 });
@@ -650,11 +723,19 @@ auth.onAuthStateChanged(function(user){
    LISTENERS EM TEMPO REAL — EMPRESAS
    ========================================================================= */
 function iniciarListenersEmpresas(){
-  if(unsubEmpresas) unsubEmpresas();
+  if(unsubEmpresas) unsubEmpresas(); if(unsubConsulta) unsubConsulta();
   unsubEmpresas = db.collection("empresas").orderBy("nome").onSnapshot(function(snap){
     empresas = snap.docs.map(d => Object.assign({id:d.id}, d.data()));
     ligarListenersResumoChecklist();
     renderizarTabela();
+  });
+}
+
+function iniciarListenerConsulta(){
+  if(unsubConsulta) unsubConsulta();
+  unsubConsulta = db.collection("consultaContabil").orderBy("titulo").onSnapshot(function(snap){
+    consultaFirestore = snap.docs.map(d => Object.assign({id:d.id, origem:"firestore"}, d.data()));
+    buscarConsulta();
   });
 }
 
@@ -1286,6 +1367,220 @@ function exportarChecklistExcel(){
   const nomeArquivo = `Checklist_${empresaAtual.nome.replace(/[^a-zA-Z0-9]/g,"_")}_${comp}.xlsx`;
   XLSX.writeFile(wb, nomeArquivo);
 }
+
+/* =========================================================================
+   CONSULTA RÁPIDA DE LANÇAMENTOS
+   Para adicionar um novo caso, copie um objeto do array e ajuste os campos.
+========================================================================= */
+const CONSULTA_CONTABIL_BASE = [
+  {
+    titulo: "Receita financeira (rendimento de aplicação)",
+    termos: ["receita financeira","rendimento","aplicacao financeira","juros recebidos","cdb","poupanca"],
+    debito: "Aplicações Financeiras (Ativo Circulante)",
+    credito: "Receitas Financeiras (Resultado)",
+    explicacao: "O rendimento aumenta o saldo da aplicação (débito no ativo) e é reconhecido como receita no resultado (crédito).",
+    exemplo: "Ex: rendimento de R$ 150 no CDB → Débito: Aplicações Financeiras R$150 / Crédito: Receitas Financeiras R$150."
+  },
+  {
+    titulo: "Compra de mercadoria/serviço a prazo (fornecedores)",
+    termos: ["fornecedores","compra a prazo","nota de entrada","duplicata a pagar"],
+    debito: "Estoques / Custo ou Despesa (conforme a natureza da compra)",
+    credito: "Fornecedores a Pagar (Passivo Circulante)",
+    explicacao: "A entrada de mercadoria ou serviço gera a obrigação com o fornecedor, registrada no passivo.",
+    exemplo: "Ex: compra de mercadoria a prazo R$2.000 → Débito: Estoques R$2.000 / Crédito: Fornecedores R$2.000."
+  },
+  {
+    titulo: "Pagamento a fornecedor",
+    termos: ["pagamento fornecedor","baixa fornecedor","quitacao duplicata"],
+    debito: "Fornecedores a Pagar (Passivo Circulante)",
+    credito: "Caixa ou Bancos (Ativo Circulante)",
+    explicacao: "Baixa a obrigação já registrada e reduz o saldo disponível em caixa/banco.",
+    exemplo: "Ex: pagamento de R$2.000 ao fornecedor → Débito: Fornecedores R$2.000 / Crédito: Bancos R$2.000."
+  },
+  {
+    titulo: "Provisão de folha de pagamento (salários)",
+    termos: ["salarios a pagar","folha de pagamento","provisao folha","dp"],
+    debito: "Despesas com Pessoal / Salários (Resultado)",
+    credito: "Salários a Pagar (Passivo Circulante)",
+    explicacao: "Reconhece a despesa no mês de competência, mesmo que o pagamento ocorra no mês seguinte.",
+    exemplo: "Ex: folha de R$8.000 → Débito: Despesas com Salários R$8.000 / Crédito: Salários a Pagar R$8.000."
+  },
+  {
+    titulo: "ICMS a recolher sobre vendas",
+    termos: ["icms","icms a recolher","imposto sobre vendas"],
+    debito: "ICMS sobre Vendas (Dedução da Receita / Resultado)",
+    credito: "ICMS a Recolher (Passivo Circulante)",
+    explicacao: "O ICMS destacado na venda é uma obrigação a recolher ao fisco estadual, reduzindo a receita líquida.",
+    exemplo: "Ex: venda com ICMS de R$180 → Débito: ICMS sobre Vendas R$180 / Crédito: ICMS a Recolher R$180."
+  },
+  {
+    titulo: "Depreciação de bens do ativo imobilizado",
+    termos: ["depreciacao","desgaste imobilizado","quota de depreciacao"],
+    debito: "Despesa de Depreciação (Resultado)",
+    credito: "Depreciação Acumulada (Conta Retificadora do Ativo Imobilizado)",
+    explicacao: "Reconhece a perda de valor do bem ao longo do tempo sem reduzir diretamente a conta do imobilizado.",
+    exemplo: "Ex: depreciação mensal de R$300 → Débito: Despesa de Depreciação R$300 / Crédito: Depreciação Acumulada R$300."
+  },
+  {
+    titulo: "Adiantamento a fornecedores",
+    termos: ["adiantamento fornecedor","antecipacao pagamento"],
+    debito: "Adiantamento a Fornecedores (Ativo Circulante)",
+    credito: "Caixa ou Bancos (Ativo Circulante)",
+    explicacao: "Registra o valor pago antecipadamente como um direito a receber a mercadoria/serviço futuramente.",
+    exemplo: "Ex: adiantamento de R$500 → Débito: Adiantamento a Fornecedores R$500 / Crédito: Bancos R$500."
+  },
+  {
+    titulo: "Adiantamento de clientes",
+    termos: ["adiantamento cliente","sinal recebido","antecipacao venda"],
+    debito: "Caixa ou Bancos (Ativo Circulante)",
+    credito: "Adiantamento de Clientes (Passivo Circulante)",
+    explicacao: "O valor recebido antes da entrega é uma obrigação (dever entregar o produto/serviço), não uma receita ainda.",
+    exemplo: "Ex: sinal de R$300 recebido → Débito: Bancos R$300 / Crédito: Adiantamento de Clientes R$300."
+  },
+  {
+    titulo: "PIS/COFINS sobre faturamento",
+    termos: ["pis cofins","pis a recolher","cofins a recolher"],
+    debito: "PIS/COFINS sobre Faturamento (Dedução da Receita)",
+    credito: "PIS a Recolher / COFINS a Recolher (Passivo Circulante)",
+    explicacao: "Assim como o ICMS, são deduções da receita bruta, com contrapartida de obrigação a recolher.",
+    exemplo: "Ex: PIS de R$13 e COFINS de R$60 → Débito nas contas de dedução / Crédito em PIS a Recolher e COFINS a Recolher."
+  },
+  {
+    titulo: "Simples Nacional a recolher (DAS)",
+    termos: ["das","simples nacional a recolher","guia do simples"],
+    debito: "Simples Nacional a Recolher (Despesa/Resultado) ou Tributos a Recolher",
+    credito: "Simples Nacional a Recolher (Passivo Circulante)",
+    explicacao: "Provisiona o valor apurado no PGDAS-D como obrigação do mês, quitada no pagamento da guia.",
+    exemplo: "Ex: DAS apurado de R$450 → Débito: Despesa com Tributos R$450 / Crédito: Simples Nacional a Recolher R$450."
+  }
+];
+
+function abrirConsulta(){
+  document.getElementById("consultaOverlay").classList.add("aberto");
+  document.getElementById("consultaInput").value = "";
+  document.getElementById("consultaInput").focus();
+  buscarConsulta();
+}
+function fecharConsulta(){
+  document.getElementById("consultaOverlay").classList.remove("aberto");
+}
+function normalizarTexto(txt){
+  return txt.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+}
+function buscarConsulta(){
+  const q = normalizarTexto(document.getElementById("consultaInput").value.trim());
+  const container = document.getElementById("consultaResultados");
+
+  let resultados = CONSULTA_CONTABIL_BASE;
+  if(q.length > 0){
+    resultados = CONSULTA_CONTABIL_BASE.filter(item=>{
+      const alvo = normalizarTexto(item.titulo + " " + item.termos.join(" "));
+      return q.split(" ").every(palavra => alvo.includes(palavra));
+    });
+  }
+
+  if(resultados.length === 0){
+    container.innerHTML = `<div class="consulta-vazio">Nenhum resultado para "${document.getElementById("consultaInput").value}".<br>Me avise pra eu cadastrar esse caso.</div>`;
+    return;
+  }
+
+  container.innerHTML = resultados.map(item => `
+    <div class="consulta-item">
+      <h4>${item.titulo}</h4>
+      <div class="lancamento">
+        <span><b>Débito:</b> ${item.debito}</span>
+        <span><b>Crédito:</b> ${item.credito}</span>
+      </div>
+      <p>${item.explicacao}</p>
+      <div class="exemplo">${item.exemplo}</div>
+    </div>
+  `).join("");
+}
+
+// Atalho: abrir com "/" em qualquer tela (opcional)
+document.addEventListener("keydown", function(e){
+  if(e.key === "/" && document.activeElement.tagName !== "INPUT" && document.activeElement.tagName !== "TEXTAREA"){
+    e.preventDefault();
+    abrirConsulta();
+  }
+});
+
+function abrirFormNovaConsulta(){
+  document.getElementById("consultaFormNovo").style.display = "block";
+  document.getElementById("novoTitulo").focus();
+}
+function fecharFormNovaConsulta(){
+  document.getElementById("consultaFormNovo").style.display = "none";
+  ["novoTitulo","novoTermos","novoDebito","novoCredito","novoExplicacao","novoExemplo"]
+    .forEach(id => document.getElementById(id).value = "");
+}
+
+function salvarNovaConsulta(){
+  const titulo = document.getElementById("novoTitulo").value.trim();
+  const debito = document.getElementById("novoDebito").value.trim();
+  const credito = document.getElementById("novoCredito").value.trim();
+  if(!titulo || !debito || !credito){
+    alert("Preencha pelo menos Título, Débito e Crédito.");
+    return;
+  }
+  const termos = document.getElementById("novoTermos").value.trim()
+    .split(",").map(t=>t.trim()).filter(Boolean);
+
+  db.collection("consultaContabil").add({
+    titulo: titulo,
+    termos: termos,
+    debito: debito,
+    credito: credito,
+    explicacao: document.getElementById("novoExplicacao").value.trim(),
+    exemplo: document.getElementById("novoExemplo").value.trim(),
+    criadoEm: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(()=>{
+    fecharFormNovaConsulta();
+  }).catch(err=>{
+    alert("Erro ao salvar: " + err.message);
+  });
+}
+
+function excluirConsulta(id){
+  if(!confirm("Excluir este caso da consulta?")) return;
+  db.collection("consultaContabil").doc(id).delete();
+}
+
+// Substitui a função buscarConsulta() anterior por esta versão combinada:
+function buscarConsulta(){
+  const q = normalizarTexto(document.getElementById("consultaInput").value.trim());
+  const container = document.getElementById("consultaResultados");
+  const todos = [...CONSULTA_CONTABIL_BASE, ...consultaFirestore];
+
+  let resultados = todos;
+  if(q.length > 0){
+    resultados = todos.filter(item=>{
+      const alvo = normalizarTexto(item.titulo + " " + (item.termos||[]).join(" "));
+      return q.split(" ").every(palavra => alvo.includes(palavra));
+    });
+  }
+
+  if(resultados.length === 0){
+    container.innerHTML = `<div class="consulta-vazio">Nenhum resultado para "${document.getElementById("consultaInput").value}".</div>`;
+    return;
+  }
+
+  container.innerHTML = resultados.map(item => `
+    <div class="consulta-item">
+      <div style="display:flex; justify-content:space-between; align-items:start;">
+        <h4>${item.titulo}</h4>
+        ${item.origem==="firestore" ? `<i class="fa-solid fa-trash" style="color:#c00; cursor:pointer; font-size:.8rem;" onclick="excluirConsulta('${item.id}')"></i>` : ""}
+      </div>
+      <div class="lancamento">
+        <span><b>Débito:</b> ${item.debito}</span>
+        <span><b>Crédito:</b> ${item.credito}</span>
+      </div>
+      <p>${item.explicacao}</p>
+      <div class="exemplo">${item.exemplo}</div>
+    </div>
+  `).join("");
+}
+
 </script>
 </body>
 </html>
