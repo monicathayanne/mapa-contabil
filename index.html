@@ -128,6 +128,28 @@ table#tabelaEmpresas td{vertical-align:middle;font-size:.83rem;}
 
 /* View checklist */
 #viewChecklist{display:none;}
+
+/* View conferência OFX */
+#viewConferencia{display:none;}
+.conf-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;}
+.conf-summary{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+.conf-summary .chip{background:#fff;border:1px solid #e3e5e8;border-radius:6px;padding:8px 14px;font-size:.78rem;font-weight:700;color:#555;}
+.conf-summary .chip b{color:var(--azul-contec);font-size:.95rem;display:block;}
+table#tabelaConferencia{font-size:.78rem;}
+table#tabelaConferencia thead th{background:var(--azul-contec);color:#fff;font-size:.68rem;letter-spacing:.3px;text-transform:uppercase;position:sticky;top:0;padding:8px 6px;}
+table#tabelaConferencia td{vertical-align:middle;padding:6px;}
+tr.origem-regra{background:#e9f7ef;}
+tr.origem-ia{background:#fff8e1;}
+tr.lanc-conferido{opacity:.55;}
+.badge-origem{font-size:.62rem;font-weight:800;padding:2px 7px;border-radius:20px;white-space:nowrap;}
+.badge-origem.regra{background:#c8e6c9;color:#1b5e20;}
+.badge-origem.ia{background:#ffe7a0;color:#7a5b00;}
+.conf-conta-input{font-size:.75rem;padding:3px 5px;}
+.conf-valor-neg{color:#b91c1c;}
+.conf-valor-pos{color:#0f5132;}
+.dropzone-ofx{border:2px dashed #cfd4da;border-radius:8px;padding:22px;text-align:center;color:#8a8f98;font-size:.82rem;background:#fff;cursor:pointer;}
+.dropzone-ofx:hover{border-color:var(--azul-contec);color:var(--azul-contec);}
+.regra-row input{font-size:.78rem;}
 .back-link{display:inline-flex;align-items:center;gap:6px;color:#555;font-weight:700;font-size:.82rem;text-decoration:none;margin-bottom:12px;}
 .back-link:hover{color:var(--azul-contec);}
 .checklist-header{background:#fff;border:1px solid #e3e5e8;border-radius:6px;padding:16px 18px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
@@ -480,6 +502,105 @@ table#tabelaEmpresas td{vertical-align:middle;font-size:.83rem;}
       <div id="secoesChecklist"></div>
     </div>
 
+    <!-- ---------- VIEW 3: CONFERÊNCIA DE LANÇAMENTOS (OFX) ---------- -->
+    <div id="viewConferencia">
+      <a href="#" class="back-link" onclick="voltarDeConferencia();return false;"><i class="fa-solid fa-arrow-left"></i> Voltar ao painel</a>
+
+      <div class="checklist-header">
+        <div>
+          <h2 id="confEmpresaNome">-</h2>
+          <div class="sub" id="confEmpresaSub">-</div>
+        </div>
+        <div class="d-flex align-items-end gap-3">
+          <button class="btn btn-sm btn-outline-secondary" onclick="abrirModalRegras()">
+            <i class="fa-solid fa-list-check"></i> Gerenciar regras
+          </button>
+          <button class="btn btn-sm" style="background-color:var(--laranja-contec); color:#fff; border-color:var(--laranja-contec);" onclick="exportarConferenciaExcel()">
+            <i class="fa-solid fa-file-excel"></i> Exportar Excel
+          </button>
+          <div class="input-group-custom" style="align-items:flex-end;">
+            <label style="font-size:.65rem; visibility:hidden;">.</label>
+            <span class="save-indicator" id="confSaveIndicator"><i class="fa-solid fa-check"></i> Salvo</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="dropzone-ofx mb-3" onclick="document.getElementById('inputOfx').click()">
+        <i class="fa-solid fa-cloud-arrow-up fa-lg mb-1"></i><br>
+        Clique para selecionar um ou mais arquivos <b>.ofx</b> (pode selecionar BB + Stone juntos)
+        <input type="file" id="inputOfx" accept=".ofx" multiple style="display:none" onchange="handleArquivosOfx(event)">
+      </div>
+
+      <div class="conf-summary" id="confResumo"></div>
+
+      <div class="form-row">
+        <div class="input-group-custom" style="flex:1;min-width:200px;">
+          <label>BUSCAR</label>
+          <input type="text" id="confBusca" class="form-control form-control-sm" placeholder="Banco, histórico, conta..." onkeyup="renderizarConferencia()">
+        </div>
+        <div class="input-group-custom">
+          <label>ORIGEM</label>
+          <select id="confFiltroOrigem" class="form-select form-select-sm" onchange="renderizarConferencia()">
+            <option value="TODOS">Todas</option>
+            <option value="Regra">Só por regra</option>
+            <option value="IA (revisar)">Só para revisar</option>
+          </select>
+        </div>
+        <div class="input-group-custom">
+          <label>CONFERIDO</label>
+          <select id="confFiltroConferido" class="form-select form-select-sm" onchange="renderizarConferencia()">
+            <option value="TODOS">Todos</option>
+            <option value="nao">Ainda não conferidos</option>
+            <option value="sim">Já conferidos</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle" id="tabelaConferencia">
+          <thead>
+            <tr>
+              <th style="width:26px;"></th>
+              <th>Banco</th>
+              <th>Data</th>
+              <th style="text-align:left;">Histórico</th>
+              <th>Valor</th>
+              <th>Conta sugerida</th>
+              <th>Origem</th>
+              <th>Observação</th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabelaConferencia"></tbody>
+        </table>
+      </div>
+      <div id="confVazio" class="empty-state" style="display:none;">
+        <i class="fa-solid fa-file-invoice-dollar"></i>
+        Nenhum lançamento importado ainda para esta competência. Suba um arquivo OFX acima.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== MODAL GERENCIAR REGRAS ===================== -->
+<div class="modal fade" id="modalRegras" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header text-white py-2" style="background:var(--azul-contec);">
+        <h6 class="modal-title fw-bold">Regras de classificação (compartilhadas entre empresas)</h6>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="small text-muted">A regra procura o padrão (texto ou trecho, sem diferenciar maiúsculas/minúsculas) dentro do histórico do lançamento. A primeira regra que bater é usada.</p>
+        <div id="corpoRegras"></div>
+        <button class="btn btn-sm btn-outline-primary mt-2" onclick="adicionarLinhaRegra()"><i class="fa-solid fa-plus"></i> Nova regra</button>
+        <button class="btn btn-sm btn-outline-secondary mt-2" onclick="seedRegrasPadrao()"><i class="fa-solid fa-rotate"></i> Carregar regras padrão (Junho/2026)</button>
+      </div>
+      <div class="modal-footer py-2">
+        <span class="save-indicator" id="regrasSaveIndicator"><i class="fa-solid fa-check"></i> Salvo</span>
+        <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Fechar</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -861,6 +982,7 @@ function renderizarTabela(){
       <td>${r.pendentes>0 ? `<span class="pend-badge">${r.pendentes}</span>` : `<span class="text-success"><i class="fa-solid fa-circle-check"></i></span>`}</td>
       <td><span class="status-chip ${statusClasse}">${r.statusGeral}</span></td>
       <td>
+        <button class="btn btn-sm btn-action" title="Conferência de lançamentos (OFX)" onclick="event.stopPropagation(); abrirConferencia('${emp.id}')"><i class="fa-solid fa-file-invoice-dollar"></i></button>
         <button class="btn btn-sm btn-action" onclick="event.stopPropagation(); editarEmpresa('${emp.id}')"><i class="fa-solid fa-pencil"></i></button>
         <button class="btn btn-sm btn-action text-danger" onclick="event.stopPropagation(); excluirEmpresa('${emp.id}')"><i class="fa-solid fa-trash"></i></button>
       </td>
@@ -1613,6 +1735,372 @@ function salvarNovaConsulta(){
 function excluirConsulta(id){
   if(!confirm("Excluir este caso da consulta?")) return;
   db.collection("consultaContabil").doc(id).delete();
+}
+
+/* =========================================================================
+   CONFERÊNCIA DE LANÇAMENTOS (OFX)
+   ========================================================================= */
+
+// Regras padrão validadas no protótipo (junho/2026) — servem só de ponto de
+// partida; o gerenciamento real fica em Firestore (coleção "regrasConferencia"),
+// compartilhado entre todas as empresas do escritório.
+const REGRAS_PADRAO = [
+  { padrao: "10590566000174", contaCodigo: "1.1.1.02.0003", contaNome: "TRANSFERENCIA ENTRE CONTAS A IDENTIFICAR" },
+  { padrao: "TARIFA", contaCodigo: "3.2.2.01.00010", contaNome: "TARIFA BANCARIA" },
+  { padrao: "RENDIMENTO AUTOM|RENDE FACIL|RESGATE FUNDO", contaCodigo: "1.1.1.03.00002", contaNome: "APLICACAO FINANCEIRA" },
+  { padrao: "^Recebimento vendas|Maquininha", contaCodigo: "1.1.2.01.00001", contaNome: "CLIENTES DIVERSOS (cartão/pix vendas)" },
+  { padrao: "SIMPLES NACIONAL", contaCodigo: "2.1.2.01.00015", contaNome: "SIMPLES NACIONAL A RECOLHER" },
+  { padrao: "RFB.?DARF", contaCodigo: "2.1.3.02.00001", contaNome: "INSS A RECOLHER (DARF)" },
+  { padrao: "DAE ESTADO", contaCodigo: "2.1.2.01.00025", contaNome: "ICMS ANTECIPADO A RECOLHER" },
+  { padrao: "COELCE|ENERGIA", contaCodigo: "3.2.3.04.00001", contaNome: "ENERGIA ELÉTRICA" },
+  { padrao: "FERNANDA MARIA.*ALAN", contaCodigo: "1.2.2.04.00002", contaNome: "SÓCIO(A) - ADIANTAMENTO" },
+  { padrao: "\\bCONTEC\\b|HONORARIOS CONTABEIS", contaCodigo: "3.2.3.04.00008", contaNome: "HONORÁRIOS CONTÁBEIS" },
+  { padrao: "PENSAO ALIMENTICIA", contaCodigo: "2.1.4.02.00002", contaNome: "PENSÕES ALIMENTÍCIAS A PAGAR" },
+  { padrao: "CARTAO CREDITO|EMPRESARIAL ELO", contaCodigo: "3.2.1.06.00020", contaNome: "DESPESAS CARTÃO DE CRÉDITO" },
+  { padrao: "PRUDENTIAL", contaCodigo: "3.2.3.04.00005", contaNome: "SEGUROS" },
+  { padrao: "ECAD", contaCodigo: "3.2.3.04.00009", contaNome: "SERVIÇOS PRESTADOS POR TERCEIROS" },
+];
+
+let regras = [];              // [{id, padrao, contaCodigo, contaNome}]
+let unsubRegras = null;
+let lancamentosAtual = [];    // lançamentos da competência aberta
+let confAtualRef = null;
+let confSalvarTimeout = null;
+
+function normalizarChaveOfx(nome){
+  // gera um id estável por lançamento pra permitir merge sem duplicar ao reimportar
+  return (nome||"").toString();
+}
+
+function detectarBancoOfx(texto){
+  const m = texto.match(/<ORG>([^<\r\n]*)/i);
+  if(m){
+    const org = m[1].trim();
+    if(/stone/i.test(org)) return "Stone";
+    if(/brasil/i.test(org)) return "Banco do Brasil";
+    return org;
+  }
+  return "Banco não identificado";
+}
+
+function parseOfxTexto(texto){
+  const banco = detectarBancoOfx(texto);
+  const blocos = texto.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/g) || [];
+  const out = [];
+  blocos.forEach(b=>{
+    const get = (tag) => {
+      const m = b.match(new RegExp("<"+tag+">([^<\\r\\n]*)"));
+      return m ? m[1].trim() : "";
+    };
+    const nome = get("NAME");
+    const memo = get("MEMO");
+    const valor = parseFloat(get("TRNAMT") || "0");
+    const dataRaw = get("DTPOSTED").slice(0,8);
+    if(!dataRaw) return;
+    if(valor === 0 && /saldo/i.test(nome)) return;
+    const dataFmt = dataRaw.length===8 ? `${dataRaw.slice(6,8)}/${dataRaw.slice(4,6)}/${dataRaw.slice(0,4)}` : dataRaw;
+    const historico = (nome+" "+memo).trim();
+    out.push({
+      banco: banco,
+      data: dataFmt,
+      historico: historico,
+      valor: valor,
+      chave: banco+"|"+dataRaw+"|"+historico+"|"+valor.toFixed(2)
+    });
+  });
+  return out;
+}
+
+function classificarLancamento(historico){
+  for(const r of regras){
+    if(!r.padrao) continue;
+    try{
+      const re = new RegExp(r.padrao, "i");
+      if(re.test(historico)){
+        return { contaCodigo: r.contaCodigo||"", contaNome: r.contaNome||"", origem: "Regra" };
+      }
+    }catch(e){ /* regra com regex inválido - ignora */ }
+  }
+  return { contaCodigo: "", contaNome: "NÃO IDENTIFICADO - revisar", origem: "IA (revisar)" };
+}
+
+/* ------------ Regras: Firestore ------------ */
+function carregarRegras(cb){
+  if(unsubRegras) unsubRegras();
+  unsubRegras = db.collection("regrasConferencia").orderBy("padrao").onSnapshot(function(snap){
+    regras = snap.docs.map(d => Object.assign({id:d.id}, d.data()));
+    if(cb) cb();
+    if(document.getElementById("modalRegras").classList.contains("show")) renderizarRegras();
+  });
+}
+
+function seedRegrasPadrao(){
+  if(!confirm("Isso adiciona as regras padrão validadas em Junho/2026 à sua lista atual. Continuar?")) return;
+  const batch = db.batch();
+  REGRAS_PADRAO.forEach(r=>{
+    const ref = db.collection("regrasConferencia").doc();
+    batch.set(ref, r);
+  });
+  batch.commit();
+}
+
+function abrirModalRegras(){
+  renderizarRegras();
+  new bootstrap.Modal(document.getElementById("modalRegras")).show();
+}
+
+function renderizarRegras(){
+  const cont = document.getElementById("corpoRegras");
+  if(regras.length===0){
+    cont.innerHTML = `<div class="empty-state" style="padding:20px;"><i class="fa-solid fa-list-check"></i> Nenhuma regra cadastrada ainda. Clique em "Carregar regras padrão" para começar.</div>`;
+    return;
+  }
+  cont.innerHTML = `<div class="row g-1 mb-1 small fw-bold text-muted">
+      <div class="col-4">Padrão (texto/regex)</div>
+      <div class="col-2">Código da conta</div>
+      <div class="col-4">Nome da conta</div>
+      <div class="col-2"></div>
+    </div>` +
+    regras.map(r => `
+    <div class="row g-1 mb-1 regra-row" data-id="${r.id}">
+      <div class="col-4"><input class="form-control form-control-sm" value="${escapeHtml(r.padrao||"")}" onchange="atualizarRegra('${r.id}','padrao',this.value)"></div>
+      <div class="col-2"><input class="form-control form-control-sm" value="${escapeHtml(r.contaCodigo||"")}" onchange="atualizarRegra('${r.id}','contaCodigo',this.value)"></div>
+      <div class="col-4"><input class="form-control form-control-sm" value="${escapeHtml(r.contaNome||"")}" onchange="atualizarRegra('${r.id}','contaNome',this.value)"></div>
+      <div class="col-2"><button class="btn btn-sm btn-action text-danger" onclick="excluirRegra('${r.id}')"><i class="fa-solid fa-trash"></i></button></div>
+    </div>`).join("");
+}
+
+function marcarRegrasSalvando(){
+  const el = document.getElementById("regrasSaveIndicator");
+  el.className = "save-indicator saving";
+  el.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> Salvando...';
+}
+function marcarRegrasSalvo(){
+  const el = document.getElementById("regrasSaveIndicator");
+  el.className = "save-indicator";
+  el.innerHTML = '<i class="fa-solid fa-check"></i> Salvo';
+}
+
+function atualizarRegra(id, campo, valor){
+  marcarRegrasSalvando();
+  db.collection("regrasConferencia").doc(id).update({[campo]: valor})
+    .then(marcarRegrasSalvo)
+    .then(()=> reclassificarTudo())
+    .catch(err=>alert("Erro ao salvar regra: "+err.message));
+}
+
+function adicionarLinhaRegra(){
+  db.collection("regrasConferencia").add({padrao:"", contaCodigo:"", contaNome:""});
+}
+
+function excluirRegra(id){
+  if(!confirm("Excluir esta regra?")) return;
+  db.collection("regrasConferencia").doc(id).delete().then(()=> reclassificarTudo());
+}
+
+function reclassificarTudo(){
+  // reaplica as regras nos lançamentos já carregados (sem mexer no que já foi conferido manualmente)
+  if(!lancamentosAtual.length) return;
+  lancamentosAtual.forEach(l=>{
+    if(l.contaEditadaManual) return;
+    const c = classificarLancamento(l.historico);
+    l.contaCodigo = c.contaCodigo;
+    l.contaNome = c.contaNome;
+    l.origem = c.origem;
+  });
+  renderizarConferencia();
+  salvarConferencia();
+}
+
+/* ------------ View: abrir/fechar ------------ */
+function voltarDeConferencia(){
+  document.getElementById("viewConferencia").style.display = "none";
+  document.getElementById("viewEmpresas").style.display = "block";
+  if(unsubRegras) unsubRegras();
+  empresaAtual = null;
+}
+
+function abrirConferencia(empresaId){
+  const emp = empresas.find(e=>e.id===empresaId);
+  if(!emp) return;
+  empresaAtual = emp;
+  document.getElementById("viewEmpresas").style.display = "none";
+  document.getElementById("viewConferencia").style.display = "block";
+  document.getElementById("confEmpresaNome").textContent = emp.nome;
+  document.getElementById("confEmpresaSub").textContent =
+    (emp.cnpj?emp.cnpj+" · ":"") + "Competência " + competenciaAtual();
+
+  carregarRegras();
+
+  const docId = emp.id + "_" + competenciaAtual();
+  confAtualRef = db.collection("conferenciaOfx").doc(docId);
+  confAtualRef.onSnapshot(function(doc){
+    lancamentosAtual = doc.exists ? (doc.data().lancamentos || []) : [];
+    renderizarConferencia();
+  });
+}
+
+/* ------------ Importação de OFX ------------ */
+function handleArquivosOfx(event){
+  const arquivos = Array.from(event.target.files || []);
+  if(!arquivos.length) return;
+  let pendentes = arquivos.length;
+  const novos = [];
+  arquivos.forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = function(e){
+      const parsed = parseOfxTexto(e.target.result);
+      novos.push(...parsed);
+      pendentes--;
+      if(pendentes===0) mesclarLancamentos(novos);
+    };
+    reader.readAsText(file, "UTF-8");
+  });
+  event.target.value = "";
+}
+
+function mesclarLancamentos(novos){
+  const existentesPorChave = {};
+  lancamentosAtual.forEach(l => existentesPorChave[l.chave] = l);
+
+  novos.forEach(n=>{
+    if(existentesPorChave[n.chave]) return; // já importado antes, não duplica
+    const c = classificarLancamento(n.historico);
+    lancamentosAtual.push(Object.assign({}, n, {
+      contaCodigo: c.contaCodigo,
+      contaNome: c.contaNome,
+      origem: c.origem,
+      conferido: false,
+      observacao: "",
+      contaEditadaManual: false
+    }));
+  });
+
+  renderizarConferencia();
+  salvarConferencia();
+}
+
+/* ------------ Render ------------ */
+function formatarMoeda(v){
+  return v.toLocaleString("pt-BR", {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function escapeHtml(s){
+  return (s||"").toString().replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function renderizarConferencia(){
+  const corpo = document.getElementById("corpoTabelaConferencia");
+  const busca = (document.getElementById("confBusca").value||"").toLowerCase();
+  const filtroOrigem = document.getElementById("confFiltroOrigem").value;
+  const filtroConf = document.getElementById("confFiltroConferido").value;
+
+  corpo.innerHTML = "";
+
+  let total=0, porRegra=0, revisar=0, conferidos=0;
+
+  const lista = lancamentosAtual.filter(l=>{
+    total++;
+    if(l.origem==="Regra") porRegra++; else revisar++;
+    if(l.conferido) conferidos++;
+    const texto = (l.banco+" "+l.historico+" "+l.contaCodigo+" "+l.contaNome).toLowerCase();
+    if(busca && !texto.includes(busca)) return false;
+    if(filtroOrigem!=="TODOS" && l.origem!==filtroOrigem) return false;
+    if(filtroConf==="sim" && !l.conferido) return false;
+    if(filtroConf==="nao" && l.conferido) return false;
+    return true;
+  });
+
+  document.getElementById("confResumo").innerHTML = `
+    <div class="chip">Total<b>${total}</b></div>
+    <div class="chip">Por regra<b>${porRegra}</b></div>
+    <div class="chip">Para revisar<b>${revisar}</b></div>
+    <div class="chip">Já conferidos<b>${conferidos}/${total}</b></div>
+  `;
+
+  document.getElementById("confVazio").style.display = lancamentosAtual.length===0 ? "block" : "none";
+
+  lista.forEach(l=>{
+    const idx = lancamentosAtual.indexOf(l);
+    const tr = document.createElement("tr");
+    tr.className = (l.origem==="Regra" ? "origem-regra" : "origem-ia") + (l.conferido ? " lanc-conferido" : "");
+    const valorClasse = l.valor < 0 ? "conf-valor-neg" : "conf-valor-pos";
+    tr.innerHTML = `
+      <td><input type="checkbox" ${l.conferido?"checked":""} onchange="alternarConferido(${idx}, this.checked)"></td>
+      <td class="small">${escapeHtml(l.banco)}</td>
+      <td class="small">${l.data}</td>
+      <td style="text-align:left;" class="small">${escapeHtml(l.historico)}</td>
+      <td class="small text-end ${valorClasse}">${formatarMoeda(l.valor)}</td>
+      <td>
+        <input class="form-control form-control-sm conf-conta-input mb-1" placeholder="código" value="${escapeHtml(l.contaCodigo)}" onchange="editarContaLancamento(${idx}, 'contaCodigo', this.value)">
+        <input class="form-control form-control-sm conf-conta-input" placeholder="nome da conta" value="${escapeHtml(l.contaNome)}" onchange="editarContaLancamento(${idx}, 'contaNome', this.value)">
+      </td>
+      <td><span class="badge-origem ${l.origem==='Regra'?'regra':'ia'}">${l.origem==='Regra'?'Regra':'Revisar'}</span></td>
+      <td><input class="form-control form-control-sm" placeholder="observação..." value="${escapeHtml(l.observacao||"")}" onchange="editarObsLancamento(${idx}, this.value)"></td>
+    `;
+    corpo.appendChild(tr);
+  });
+}
+
+function alternarConferido(idx, valor){
+  lancamentosAtual[idx].conferido = valor;
+  renderizarConferencia();
+  salvarConferencia();
+}
+
+function editarContaLancamento(idx, campo, valor){
+  lancamentosAtual[idx][campo] = valor;
+  lancamentosAtual[idx].contaEditadaManual = true;
+  salvarConferencia();
+}
+
+function editarObsLancamento(idx, valor){
+  lancamentosAtual[idx].observacao = valor;
+  salvarConferencia();
+}
+
+function salvarConferencia(){
+  if(!confAtualRef) return;
+  marcarConfSalvando();
+  clearTimeout(confSalvarTimeout);
+  confSalvarTimeout = setTimeout(()=>{
+    confAtualRef.set({
+      empresaId: empresaAtual.id,
+      competencia: competenciaAtual(),
+      lancamentos: lancamentosAtual,
+      atualizadoEm: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true}).then(marcarConfSalvo).catch(err=>console.error(err));
+  }, 500);
+}
+
+function marcarConfSalvando(){
+  const el = document.getElementById("confSaveIndicator");
+  el.className = "save-indicator saving";
+  el.innerHTML = '<i class="fa-solid fa-rotate fa-spin"></i> Salvando...';
+}
+function marcarConfSalvo(){
+  const el = document.getElementById("confSaveIndicator");
+  el.className = "save-indicator";
+  el.innerHTML = '<i class="fa-solid fa-check"></i> Salvo';
+}
+
+function exportarConferenciaExcel(){
+  if(!lancamentosAtual.length){ alert("Nenhum lançamento pra exportar ainda."); return; }
+  const linhas = lancamentosAtual.map(l => ({
+    "Banco": l.banco,
+    "Data": l.data,
+    "Histórico": l.historico,
+    "Valor (R$)": l.valor,
+    "Conta Sugerida (código)": l.contaCodigo,
+    "Conta Sugerida (nome)": l.contaNome,
+    "Origem": l.origem,
+    "Conferido?": l.conferido ? "Sim" : "Não",
+    "Observação": l.observacao || ""
+  }));
+  const ws = XLSX.utils.json_to_sheet(linhas);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Conferência");
+  const nomeArquivo = `Conferencia_${(empresaAtual.nome||"empresa").replace(/[^a-zA-Z0-9]/g,"_")}_${competenciaAtual()}.xlsx`;
+  XLSX.writeFile(wb, nomeArquivo);
 }
 
 // Substitui a função buscarConsulta() anterior por esta versão combinada:
