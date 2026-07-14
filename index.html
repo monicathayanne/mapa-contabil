@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs" type="module"></script>
 
 <!-- Firebase (compat SDK, mais simples de usar sem build tools) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -306,6 +307,47 @@ tr.lanc-conferido{opacity:.55;}
     }
 }
 
+
+/* IMPORTADOR BANCÁRIO PDF -> DOMÍNIO */
+#viewImportadorBancario{display:none;}
+.imp-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:14px;margin-bottom:14px;}
+.imp-card{background:#fff;border:1px solid #e3e5e8;border-radius:8px;padding:16px;}
+.imp-card h3{font-size:.9rem;font-weight:800;color:var(--azul-contec);margin:0 0 12px;}
+.imp-drop{border:2px dashed #cfd4da;border-radius:8px;padding:30px 18px;text-align:center;cursor:pointer;color:#7b818b;background:#fafbfc;}
+.imp-drop:hover,.imp-drop.drag{border-color:var(--laranja-contec);background:#fff7ed;color:var(--laranja-contec);}
+.imp-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;}
+.imp-kpi{background:#fff;border:1px solid #e3e5e8;border-radius:8px;padding:12px;}
+.imp-kpi span{display:block;font-size:.68rem;font-weight:800;color:#777;text-transform:uppercase;}
+.imp-kpi b{display:block;color:var(--azul-contec);font-size:1.05rem;margin-top:3px;}
+.imp-status{font-size:.76rem;padding:8px 10px;border-radius:6px;background:#f8f9fa;color:#666;margin-top:10px;}
+.imp-status.ok{background:#d1e7dd;color:#0f5132;}
+.imp-status.erro{background:#f8d7da;color:#842029;}
+#tabelaImportador thead th{background:var(--azul-contec);color:#fff;font-size:.68rem;text-transform:uppercase;position:sticky;top:0;}
+#tabelaImportador td{font-size:.78rem;vertical-align:middle;}
+.imp-warning{background:#fff3cd;border:1px solid #ffe69c;color:#664d03;padding:9px 12px;border-radius:6px;font-size:.76rem;}
+@media(max-width:900px){.imp-grid{grid-template-columns:1fr}.imp-summary{grid-template-columns:repeat(2,1fr);}}
+
+
+/* MÓDULOS CONTÁBEIS V3 */
+#viewConciliacaoAuto,#viewImportadorAplicacao{display:none;}
+.mod-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+.mod-card{background:#fff;border:1px solid #e3e5e8;border-radius:8px;padding:16px;}
+.mod-card h3{font-size:.9rem;font-weight:800;color:var(--azul-contec);margin-bottom:12px;}
+.mod-drop{border:2px dashed #cfd4da;border-radius:8px;padding:25px;text-align:center;cursor:pointer;background:#fafbfc;color:#777;}
+.mod-drop:hover{border-color:var(--azul-contec);color:var(--azul-contec);}
+.mod-kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:14px 0;}
+.mod-kpi{background:#fff;border:1px solid #e3e5e8;border-radius:8px;padding:12px;}
+.mod-kpi span{display:block;font-size:.65rem;font-weight:800;color:#777;text-transform:uppercase;}
+.mod-kpi b{display:block;font-size:1rem;color:var(--azul-contec);margin-top:4px;}
+.diff-ok{color:#198754!important}.diff-bad{color:#b91c1c!important}
+.conc-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.conc-tabs button{border:1px solid #ddd;background:#fff;border-radius:20px;padding:5px 11px;font-size:.72rem;font-weight:700;}
+.conc-tabs button.active{background:var(--azul-contec);color:#fff;border-color:var(--azul-contec);}
+.mod-table thead th{background:var(--azul-contec);color:#fff;font-size:.67rem;text-transform:uppercase;position:sticky;top:0;}
+.mod-table td{font-size:.76rem;vertical-align:middle;}
+.apl-tag{font-size:.65rem;font-weight:800;padding:3px 7px;border-radius:20px;background:#e3eafc;color:#1a237e;}
+@media(max-width:900px){.mod-grid{grid-template-columns:1fr}.mod-kpis{grid-template-columns:repeat(2,1fr);}}
+
 </style>
 </head>
 <body>
@@ -427,6 +469,15 @@ tr.lanc-conferido{opacity:.55;}
 
     <button class="btn btn-sm" style="background-color:var(--laranja-contec); color:#fff; border-color:var(--laranja-contec);" onclick="exportarEmpresasExcel()">
       <i class="fa-solid fa-file-excel"></i> Exportar Empresas
+    </button>
+    <button class="btn btn-sm btn-dark" onclick="abrirImportadorBancario()">
+      <i class="fa-solid fa-building-columns"></i>  Tarifas Stone
+    </button>
+    <button class="btn btn-sm" style="background:#6f42c1;color:#fff;" onclick="abrirConciliacaoAutomatica()">
+      <i class="fa-solid fa-scale-balanced"></i> Conciliação OFX × Razão
+    </button>
+    <button class="btn btn-sm" style="background:#0f766e;color:#fff;" onclick="abrirImportadorAplicacao()">
+      <i class="fa-solid fa-chart-line"></i> Aplicações Financeiras
     </button>
     
     <!-- Input invisível -->
@@ -579,6 +630,169 @@ tr.lanc-conferido{opacity:.55;}
       </div>
     </div>
 
+    <!-- ---------- VIEW 4: IMPORTADOR BANCÁRIO PDF -> DOMÍNIO ---------- -->
+    <div id="viewImportadorBancario">
+      <a href="#" class="back-link" onclick="voltarDoImportador();return false;"><i class="fa-solid fa-arrow-left"></i> Voltar ao painel</a>
+
+      <div class="checklist-header">
+        <div>
+          <h2><i class="fa-solid fa-building-columns"></i> Importador Bancário</h2>
+          <div class="sub">Extrai tarifas do PDF bancário e gera CSV no layout de importação do Domínio.</div>
+        </div>
+        <div class="d-flex gap-2">
+          <button class="btn btn-sm btn-outline-secondary" onclick="limparImportador()"><i class="fa-solid fa-broom"></i> Limpar</button>
+          <button class="btn btn-sm" id="btnGerarDominio" disabled style="background:var(--laranja-contec);color:#fff;" onclick="gerarCsvDominio()">
+            <i class="fa-solid fa-file-csv"></i> Gerar CSV Domínio
+          </button>
+        </div>
+      </div>
+
+      <div class="imp-grid">
+        <div class="imp-card">
+          <h3>1. Extrato bancário</h3>
+          <div class="imp-drop" id="dropPdfBanco" onclick="document.getElementById('inputPdfBanco').click()">
+            <i class="fa-solid fa-file-pdf fa-2x mb-2"></i><br>
+            <b>Arraste o PDF da Stone aqui</b><br>
+            <span>ou clique para selecionar</span>
+            <input type="file" id="inputPdfBanco" accept=".pdf,application/pdf" hidden onchange="processarPdfBancario(this.files[0])">
+          </div>
+          <div id="impStatus" class="imp-status">Aguardando PDF.</div>
+        </div>
+
+        <div class="imp-card">
+          <h3>2. Configuração do lançamento</h3>
+          <div class="row g-2">
+            <div class="col-md-6"><label class="small fw-bold">Banco</label>
+              <select id="impBanco" class="form-select form-select-sm">
+                <option value="STONE">Stone</option>
+              </select>
+            </div>
+            <div class="col-md-6"><label class="small fw-bold">Tipo a extrair</label>
+              <select id="impTipo" class="form-select form-select-sm" onchange="renderizarImportador()">
+                <option value="TARIFA">Tarifas</option>
+              </select>
+            </div>
+            <div class="col-md-6"><label class="small fw-bold">Conta Débito</label>
+              <input id="impDebito" class="form-control form-control-sm" value="374">
+            </div>
+            <div class="col-md-6"><label class="small fw-bold">Conta Crédito</label>
+              <input id="impCredito" class="form-control form-control-sm" value="1081">
+            </div>
+            <div class="col-12"><label class="small fw-bold">Histórico</label>
+              <input id="impHistorico" class="form-control form-control-sm" value="SAÍDA TARIFA">
+            </div>
+            <div class="col-md-6"><label class="small fw-bold">Separador CSV</label>
+              <select id="impSeparador" class="form-select form-select-sm"><option value=";">Ponto e vírgula (;)</option><option value=",">Vírgula (,)</option></select>
+            </div>
+            <div class="col-md-6"><label class="small fw-bold">Formato da data</label>
+              <select id="impFormatoData" class="form-select form-select-sm"><option value="DD/MM/YYYY">DD/MM/AAAA</option><option value="DD/MM/YY">DD/MM/AA</option></select>
+            </div>
+          </div>
+          <div class="imp-warning mt-3"><b>Regra Stone:</b> o leitor captura somente registros “Saída Tarifa - R$ ...”. Entradas, PIX, vendas e rendimentos são ignorados.</div>
+        </div>
+      </div>
+
+      <div class="imp-summary">
+        <div class="imp-kpi"><span>Arquivo</span><b id="impKpiArquivo">—</b></div>
+        <div class="imp-kpi"><span>Tarifas</span><b id="impKpiQtd">0</b></div>
+        <div class="imp-kpi"><span>Total</span><b id="impKpiTotal">R$ 0,00</b></div>
+        <div class="imp-kpi"><span>Período</span><b id="impKpiPeriodo">—</b></div>
+      </div>
+
+      <div class="form-row">
+        <div class="input-group-custom" style="flex:1;min-width:200px;"><label>BUSCAR DATA OU VALOR</label>
+          <input id="impBusca" class="form-control form-control-sm" placeholder="Ex: 28/06 ou 1,68" oninput="renderizarImportador()">
+        </div>
+        <div class="input-group-custom"><label>VALIDAÇÃO</label>
+          <select id="impFiltro" class="form-select form-select-sm" onchange="renderizarImportador()"><option value="TODOS">Todos</option><option value="OK">Válidos</option><option value="DUP">Possíveis duplicados</option></select>
+        </div>
+      </div>
+
+      <div class="table-responsive" style="max-height:520px;overflow:auto;">
+        <table class="table table-hover mb-0" id="tabelaImportador">
+          <thead><tr><th>#</th><th>Data</th><th>Descrição</th><th class="text-end">Valor</th><th>Débito</th><th>Crédito</th><th>Histórico</th><th>Validação</th></tr></thead>
+          <tbody id="corpoImportador"></tbody>
+        </table>
+      </div>
+      <div id="impVazio" class="empty-state"><i class="fa-solid fa-file-circle-plus"></i>Envie um PDF bancário para iniciar.</div>
+    </div>
+
+
+    <!-- VIEW 5: CONCILIAÇÃO OFX X RAZÃO -->
+    <div id="viewConciliacaoAuto">
+      <a href="#" class="back-link" onclick="voltarDosModulos();return false;"><i class="fa-solid fa-arrow-left"></i> Voltar ao painel</a>
+      <div class="checklist-header">
+        <div><h2><i class="fa-solid fa-scale-balanced"></i> Conciliação OFX × Razão</h2>
+        <div class="sub">Cruza data, valor e natureza do movimento para localizar divergências bancárias.</div></div>
+        <button class="btn btn-sm btn-outline-success" onclick="exportarConciliacaoAuto()"><i class="fa-solid fa-file-excel"></i> Exportar análise</button>
+      </div>
+      <div class="mod-grid">
+        <div class="mod-card"><h3>1. Extrato OFX</h3>
+          <div class="mod-drop" onclick="document.getElementById('concOfx').click()"><i class="fa-solid fa-file-code fa-2x"></i><br><b>Selecionar OFX</b>
+          <input id="concOfx" type="file" accept=".ofx" hidden onchange="lerOfxConciliacao(this.files[0])"></div>
+          <div class="imp-status" id="concStatusOfx">Aguardando OFX.</div>
+        </div>
+        <div class="mod-card"><h3>2. Razão contábil XLSX</h3>
+          <div class="mod-drop" onclick="document.getElementById('concRazao').click()"><i class="fa-solid fa-file-excel fa-2x"></i><br><b>Selecionar Razão XLSX</b>
+          <input id="concRazao" type="file" accept=".xlsx,.xls" hidden onchange="lerRazaoConciliacao(this.files[0])"></div>
+          <div class="imp-status" id="concStatusRazao">Aguardando razão.</div>
+        </div>
+      </div>
+      <div class="mod-kpis">
+        <div class="mod-kpi"><span>Saldo/movimento OFX</span><b id="caOfx">R$ 0,00</b></div>
+        <div class="mod-kpi"><span>Movimento razão</span><b id="caRazao">R$ 0,00</b></div>
+        <div class="mod-kpi"><span>Diferença líquida</span><b id="caDif">R$ 0,00</b></div>
+        <div class="mod-kpi"><span>Só no banco</span><b id="caBanco">0</b></div>
+        <div class="mod-kpi"><span>Só contabilidade</span><b id="caContab">0</b></div>
+      </div>
+      <div class="conc-tabs">
+        <button class="active" onclick="setConcFiltro('TODOS',this)">Todos</button>
+        <button onclick="setConcFiltro('BANCO',this)">Só no banco</button>
+        <button onclick="setConcFiltro('CONTAB',this)">Só na contabilidade</button>
+        <button onclick="setConcFiltro('DUP',this)">Possíveis duplicados</button>
+        <button onclick="setConcFiltro('OK',this)">Conciliados</button>
+      </div>
+      <div class="table-responsive" style="max-height:550px;overflow:auto">
+        <table class="table table-hover mb-0 mod-table"><thead><tr><th>Status</th><th>Data</th><th>Histórico banco</th><th>Histórico razão</th><th>Valor banco</th><th>Valor razão</th><th>Diferença</th></tr></thead><tbody id="corpoConcAuto"></tbody></table>
+      </div>
+    </div>
+
+    <!-- VIEW 6: APLICAÇÕES FINANCEIRAS -->
+    <div id="viewImportadorAplicacao">
+      <a href="#" class="back-link" onclick="voltarDosModulos();return false;"><i class="fa-solid fa-arrow-left"></i> Voltar ao painel</a>
+      <div class="checklist-header">
+        <div><h2><i class="fa-solid fa-chart-line"></i> Importador de Aplicações Financeiras</h2>
+        <div class="sub">Lê o PDF da aplicação, identifica eventos financeiros e sugere lançamentos.</div></div>
+        <button class="btn btn-sm" style="background:#0f766e;color:#fff" onclick="exportarAplicacoesExcel()"><i class="fa-solid fa-file-excel"></i> Exportar lançamentos</button>
+      </div>
+      <div class="mod-grid">
+        <div class="mod-card"><h3>1. Extrato da aplicação</h3>
+          <div class="mod-drop" onclick="document.getElementById('aplPdf').click()"><i class="fa-solid fa-file-pdf fa-2x"></i><br><b>Selecionar PDF da aplicação</b>
+          <input id="aplPdf" type="file" accept=".pdf" hidden onchange="lerPdfAplicacao(this.files[0])"></div>
+          <div class="imp-status" id="aplStatus">Aguardando PDF.</div>
+        </div>
+        <div class="mod-card"><h3>2. Mapa contábil</h3>
+          <div class="row g-2">
+            <div class="col-6"><label class="small fw-bold">Banco conta movimento</label><input id="aplBanco" class="form-control form-control-sm" value="8"></div>
+            <div class="col-6"><label class="small fw-bold">Aplicação financeira</label><input id="aplConta" class="form-control form-control-sm" value="1076"></div>
+            <div class="col-6"><label class="small fw-bold">Receita de rendimento</label><input id="aplRend" class="form-control form-control-sm" value="432"></div>
+            <div class="col-6"><label class="small fw-bold">IR sobre aplicação</label><input id="aplIr" class="form-control form-control-sm" value="1104"></div>
+            <div class="col-6"><label class="small fw-bold">IOF</label><input id="aplIof" class="form-control form-control-sm" value="1103"></div>
+          </div><div class="imp-warning mt-3"><b>Mapa FMG validado pelo plano de contas:</b> Banco do Brasil 8 · BB Rende Fácil 1076 · Juros de Aplicações 432 · IR sobre Aplicação 1104 · IOF 1103.</div>
+        </div>
+      </div>
+      <div class="mod-kpis">
+        <div class="mod-kpi"><span>Aplicações</span><b id="aplKAplic">R$ 0,00</b></div>
+        <div class="mod-kpi"><span>Resgates</span><b id="aplKResg">R$ 0,00</b></div>
+        <div class="mod-kpi"><span>Rendimentos</span><b id="aplKRend">R$ 0,00</b></div>
+        <div class="mod-kpi"><span>IR</span><b id="aplKIr">R$ 0,00</b></div>
+        <div class="mod-kpi"><span>IOF</span><b id="aplKIof">R$ 0,00</b></div>
+      </div>
+      <div class="table-responsive" style="max-height:550px;overflow:auto">
+        <table class="table table-hover mb-0 mod-table"><thead><tr><th>Data</th><th>Evento</th><th>Descrição encontrada</th><th>Valor</th><th>Débito sugerido</th><th>Crédito sugerido</th><th>Histórico</th></tr></thead><tbody id="corpoAplicacoes"></tbody></table>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -654,6 +868,12 @@ tr.lanc-conferido{opacity:.55;}
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script type="module">
+import * as pdfjsLib from "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.mjs";
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs";
+window.pdfjsLib = pdfjsLib;
+</script>
 
 <script>
 
@@ -2102,6 +2322,345 @@ function exportarConferenciaExcel(){
   const nomeArquivo = `Conferencia_${(empresaAtual.nome||"empresa").replace(/[^a-zA-Z0-9]/g,"_")}_${competenciaAtual()}.xlsx`;
   XLSX.writeFile(wb, nomeArquivo);
 }
+
+
+
+/* ================= V3: CONCILIAÇÃO E APLICAÇÕES ================= */
+let concOfxDados=[], concRazaoDados=[], concResultado=[], concFiltro="TODOS";
+let aplEventos=[];
+
+function esconderViews(){
+ ["viewEmpresas","viewChecklist","viewConferencia","viewImportadorBancario","viewConciliacaoAuto","viewImportadorAplicacao"].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display="none";});
+}
+function abrirConciliacaoAutomatica(){esconderViews();document.getElementById("viewConciliacaoAuto").style.display="block";}
+function abrirImportadorAplicacao(){esconderViews();document.getElementById("viewImportadorAplicacao").style.display="block";}
+function voltarDosModulos(){esconderViews();document.getElementById("viewEmpresas").style.display="block";}
+function moedaN(v){return "R$ "+Number(v||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function dataIsoBr(s){
+ s=String(s||"");
+ let m=s.match(/(\d{4})(\d{2})(\d{2})/); if(m)return `${m[3]}/${m[2]}/${m[1]}`;
+ m=s.match(/(\d{2})\/(\d{2})\/(\d{2,4})/); if(m)return `${m[1]}/${m[2]}/${m[3].length===2?"20"+m[3]:m[3]}`;
+ return s.slice(0,10);
+}
+function normTxt(s){return String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toUpperCase().replace(/\s+/g," ").trim();}
+async function lerOfxConciliacao(file){
+ if(!file)return;
+ const txt=await file.text(); concOfxDados=[];
+ const blocos=txt.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/gi)||[];
+ blocos.forEach((b,i)=>{
+   const get=t=>{const m=b.match(new RegExp("<"+t+">([^<\\r\\n]+)","i"));return m?m[1].trim():"";};
+   const val=parseFloat(get("TRNAMT").replace(",", "."))||0;
+   concOfxDados.push({id:"B"+i,data:dataIsoBr(get("DTPOSTED")),valor:val,historico:get("MEMO")||get("NAME")||get("TRNTYPE"),tipo:val>=0?"D":"C"});
+ });
+ document.getElementById("concStatusOfx").textContent=`${file.name}: ${concOfxDados.length} movimentos lidos.`;
+ document.getElementById("concStatusOfx").className="imp-status ok"; executarConciliacao();
+}
+function excelValor(v){
+ if(typeof v==="number")return v;
+ let s=String(v??"").trim().replace(/R\$\s?/g,"");
+ if(!s)return 0;
+ if(s.includes(",") && s.includes("."))s=s.replace(/\./g,"").replace(",",".");
+ else if(s.includes(","))s=s.replace(",",".");
+ return parseFloat(s)||0;
+}
+async function lerRazaoConciliacao(file){
+ if(!file)return;
+ const wb=XLSX.read(await file.arrayBuffer(),{type:"array",cellDates:true});
+ const ws=wb.Sheets[wb.SheetNames[0]];
+ const rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:"",raw:false});
+ let hdr=-1, cols={};
+ for(let i=0;i<Math.min(rows.length,40);i++){
+   const n=rows[i].map(normTxt);
+   if(n.some(x=>x.includes("DATA")) && n.some(x=>x.includes("DEBITO")||x.includes("CRÉDITO")||x.includes("CREDITO"))){hdr=i; n.forEach((x,j)=>cols[x]=j);break;}
+ }
+ if(hdr<0){document.getElementById("concStatusRazao").textContent="Não identifiquei o cabeçalho do razão.";document.getElementById("concStatusRazao").className="imp-status erro";return;}
+ const idx=(termos)=>{const k=Object.keys(cols).find(x=>termos.some(t=>x.includes(t)));return k===undefined?-1:cols[k];};
+ const cData=idx(["DATA"]),cHist=idx(["HISTORICO","HISTÓRICO"]),cDeb=idx(["DEBITO","DÉBITO"]),cCred=idx(["CREDITO","CRÉDITO"]);
+ concRazaoDados=[];
+ rows.slice(hdr+1).forEach((r,i)=>{
+   const deb=cDeb>=0?excelValor(r[cDeb]):0, cred=cCred>=0?excelValor(r[cCred]):0;
+   if(!deb&&!cred)return;
+   concRazaoDados.push({id:"R"+i,data:dataIsoBr(r[cData]),valor:deb-cred,historico:r[cHist]||"",tipo:deb?"D":"C"});
+ });
+ document.getElementById("concStatusRazao").textContent=`${file.name}: ${concRazaoDados.length} lançamentos lidos.`;
+ document.getElementById("concStatusRazao").className="imp-status ok"; executarConciliacao();
+}
+function executarConciliacao(){
+ if(!concOfxDados.length||!concRazaoDados.length)return;
+ const usados=new Set(); concResultado=[];
+ // Match conservador: mesma data, mesmo sinal/natureza e mesmo valor absoluto.
+ concOfxDados.forEach(b=>{
+   let candidatos=concRazaoDados.map((r,i)=>({r,i})).filter(x=>!usados.has(x.i)&&x.r.data===b.data&&Math.abs(Math.abs(x.r.valor)-Math.abs(b.valor))<0.005&&Math.sign(x.r.valor)===Math.sign(b.valor));
+   let achou=candidatos[0];
+   if(achou){usados.add(achou.i);concResultado.push({status:"OK",banco:b,razao:achou.r,dif:b.valor-achou.r.valor});}
+   else concResultado.push({status:"BANCO",banco:b,razao:null,dif:b.valor});
+ });
+ concRazaoDados.forEach((r,i)=>{if(!usados.has(i))concResultado.push({status:"CONTAB",banco:null,razao:r,dif:-r.valor});});
+ // Duplicidade provável no razão: data+sinal+valor+histórico normalizado repetido.
+ const dup={}; concRazaoDados.forEach(r=>{const k=[r.data,r.valor.toFixed(2),normTxt(r.historico)].join("|");dup[k]=(dup[k]||0)+1;});
+ concResultado.forEach(x=>{if(x.razao){const k=[x.razao.data,x.razao.valor.toFixed(2),normTxt(x.razao.historico)].join("|");if(dup[k]>1&&x.status!=="OK")x.status="DUP";}});
+ renderConcAuto();
+}
+function setConcFiltro(f,b){concFiltro=f;document.querySelectorAll(".conc-tabs button").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderConcAuto();}
+function renderConcAuto(){
+ const tb=document.getElementById("corpoConcAuto"); if(!tb)return; tb.innerHTML="";
+ const lista=concResultado.filter(x=>concFiltro==="TODOS"||x.status===concFiltro);
+ lista.forEach(x=>{
+  const tr=document.createElement("tr"); const d=x.banco?.data||x.razao?.data||"";
+  const badge=x.status==="OK"?"success":x.status==="DUP"?"warning":x.status==="BANCO"?"danger":"secondary";
+  tr.innerHTML=`<td><span class="badge bg-${badge}">${x.status}</span></td><td>${d}</td><td>${escapeHtml(x.banco?.historico||"—")}</td><td>${escapeHtml(x.razao?.historico||"—")}</td><td>${x.banco?moedaN(x.banco.valor):"—"}</td><td>${x.razao?moedaN(x.razao.valor):"—"}</td><td>${moedaN(x.dif)}</td>`;tb.appendChild(tr);
+ });
+ const soB=concResultado.filter(x=>x.status==="BANCO"), soC=concResultado.filter(x=>x.status==="CONTAB"||x.status==="DUP");
+ const movO=concOfxDados.reduce((s,x)=>s+x.valor,0), movR=concRazaoDados.reduce((s,x)=>s+x.valor,0), dif=movO-movR;
+ document.getElementById("caOfx").textContent=moedaN(movO);document.getElementById("caRazao").textContent=moedaN(movR);
+ const de=document.getElementById("caDif");de.textContent=moedaN(dif);de.className=Math.abs(dif)<.005?"diff-ok":"diff-bad";
+ document.getElementById("caBanco").textContent=soB.length;document.getElementById("caContab").textContent=soC.length;
+}
+function exportarConciliacaoAuto(){
+ if(!concResultado.length)return alert("Faça a conciliação primeiro.");
+ const rows=concResultado.map(x=>({Status:x.status,Data:x.banco?.data||x.razao?.data,"Histórico banco":x.banco?.historico||"","Histórico razão":x.razao?.historico||"","Valor banco":x.banco?.valor??"","Valor razão":x.razao?.valor??"",Diferença:x.dif}));
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(rows),"Conciliação");XLSX.writeFile(wb,"Conciliacao_OFX_Razao.xlsx");
+}
+
+async function lerPdfAplicacao(file){
+ if(!file)return;
+ if(!window.pdfjsLib)return alert("Leitor PDF ainda carregando.");
+ document.getElementById("aplStatus").textContent="Lendo Rende Fácil...";
+ try{
+  const pdf=await window.pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise;
+  let texto="";
+  for(let n=1;n<=pdf.numPages;n++){
+    const pg=await pdf.getPage(n),ct=await pg.getTextContent();
+    texto+="\n"+ct.items.map(i=>i.str||"").join(" ");
+  }
+  texto=texto.replace(/\s+/g," ");
+  aplEventos=[];
+  // Captura linhas estruturadas do Rende Fácil: Data + Histórico + Capital + Rendimento + IR + IOF + Líquido.
+  const rx=/(\d{2}\/\d{2}\/\d{4})\s+(Aplicação|Resgate)\s+R\$\s*([\d.]+,\d{2})\s+R\$\s*([\d.]+,\d{2})\s+R\$\s*([\d.]+,\d{2})\s+R\$\s*([\d.]+,\d{2})\s+R\$\s*([\d.]+,\d{2})/gi;
+  let m;
+  while((m=rx.exec(texto))!==null){
+    aplEventos.push({
+      data:m[1],tipo:normTxt(m[2])==="APLICACAO"?"APLICAÇÃO":"RESGATE",
+      descricao:m[2],capital:excelValor(m[3]),rendimento:excelValor(m[4]),
+      ir:excelValor(m[5]),iof:excelValor(m[6]),liquido:excelValor(m[7])
+    });
+  }
+  const resumo={};
+  [["aplicacoes",/Aplicações no mês:\s*R\$\s*([\d.]+,\d{2})/i],
+   ["resgates",/Resgates líquidos no mês:\s*R\$\s*([\d.]+,\d{2})/i],
+   ["ir",/IR sobre resgates no mês:\s*R\$\s*([\d.]+,\d{2})/i],
+   ["iof",/IOF sobre resgates no mês:\s*R\$\s*([\d.]+,\d{2})/i],
+   ["rendimento",/Rendimento no mês:\s*R\$\s*([\d.]+,\d{2})/i],
+   ["saldoFinal",/Saldo bruto em \d{2}\/\d{2}\/\d{4}\s*R\$\s*([\d.]+,\d{2})/gi]
+  ].forEach(([k,r])=>{
+    let last="";
+    if(r.global){
+      let z;
+      while((z=r.exec(texto))!==null) last=z[1];
+    }else{
+      const z=r.exec(texto);
+      if(z) last=z[1];
+    }
+    resumo[k]=last?excelValor(last):0;
+  });
+  window.aplResumoAtual=resumo;
+  document.getElementById("aplStatus").textContent=`${file.name}: ${aplEventos.length} movimentações do Rende Fácil identificadas. Saldo bruto final: ${moedaN(resumo.saldoFinal)}.`;
+  document.getElementById("aplStatus").className="imp-status ok";
+  renderAplicacoes();
+ }catch(e){
+  document.getElementById("aplStatus").textContent="Erro ao ler PDF: "+e.message;
+  document.getElementById("aplStatus").className="imp-status erro";
+ }
+}
+function contasAplicacao(e){
+ const banco=document.getElementById("aplBanco").value.trim(), apl=document.getElementById("aplConta").value.trim(),
+ rend=document.getElementById("aplRend").value.trim(),ir=document.getElementById("aplIr").value.trim(),iof=document.getElementById("aplIof").value.trim();
+ if(e.tipo==="APLICAÇÃO") return [{data:e.data,evento:"APLICAÇÃO",valor:e.capital,debito:apl,credito:banco,historico:"APLICAÇÃO FINANCEIRA"}];
+ const l=[];
+ if(e.liquido) l.push({data:e.data,evento:"RESGATE LÍQUIDO",valor:e.liquido,debito:banco,credito:apl,historico:"RESGATE DE APLICAÇÃO"});
+ if(e.rendimento) l.push({data:e.data,evento:"RENDIMENTO",valor:e.rendimento,debito:apl,credito:rend,historico:"RENDIMENTO DE APLICAÇÃO"});
+ if(e.ir) l.push({data:e.data,evento:"IR",valor:e.ir,debito:ir,credito:apl,historico:"IR SOBRE APLICAÇÃO"});
+ if(e.iof) l.push({data:e.data,evento:"IOF",valor:e.iof,debito:iof,credito:apl,historico:"IOF SOBRE APLICAÇÃO"});
+ return l;
+}
+function todosLancamentosAplicacao(){return aplEventos.flatMap(contasAplicacao);}
+function renderAplicacoes(){
+ const tb=document.getElementById("corpoAplicacoes");if(!tb)return;tb.innerHTML="";
+ todosLancamentosAplicacao().forEach(e=>{const tr=document.createElement("tr");tr.innerHTML=`<td>${e.data}</td><td><span class="apl-tag">${e.evento}</span></td><td>${escapeHtml(e.historico)}</td><td>${moedaN(e.valor)}</td><td>${escapeHtml(e.debito)}</td><td>${escapeHtml(e.credito)}</td><td>${escapeHtml(e.historico)}</td>`;tb.appendChild(tr)});
+ const r=window.aplResumoAtual||{};
+ document.getElementById("aplKAplic").textContent=moedaN(r.aplicacoes||0);
+ document.getElementById("aplKResg").textContent=moedaN(r.resgates||0);
+ document.getElementById("aplKRend").textContent=moedaN(r.rendimento||0);
+ document.getElementById("aplKIr").textContent=moedaN(r.ir||0);
+ document.getElementById("aplKIof").textContent=moedaN(r.iof||0);
+}
+function exportarAplicacoesExcel(){
+ const lanc=todosLancamentosAplicacao();
+ if(!lanc.length)return alert("Envie o PDF do Rende Fácil.");
+ const cab=["Data","Cód. Conta Debito","Cód. Conta Credito","Valor","Cód. Histórico","Complemento Histórico","Inicia Lote","Código Matriz/Filial","Centro de Custo Débito","Centro de Custo Crédito"];
+ const rows=[cab];
+ lanc.forEach((e,i)=>rows.push([e.data,e.debito,e.credito,e.valor,"",e.historico,i===0?"1":"","","",""]));
+ const ws=XLSX.utils.aoa_to_sheet(rows),wb=XLSX.utils.book_new();
+ XLSX.utils.book_append_sheet(wb,ws,"Importação Domínio");
+ XLSX.writeFile(wb,"Importacao_Aplicacoes_Dominio.xlsx");
+}
+document.addEventListener("input",e=>{if(["aplBanco","aplConta","aplRend","aplIr","aplIof"].includes(e.target.id))renderAplicacoes();});
+
+
+/* ========================
+   IMPORTADOR BANCÁRIO PDF -> DOMÍNIO
+   ======================== */
+let tarifasPdfAtual = [];
+let arquivoPdfAtual = "";
+
+function abrirImportadorBancario(){
+  document.getElementById("viewEmpresas").style.display="none";
+  document.getElementById("viewChecklist").style.display="none";
+  document.getElementById("viewConferencia").style.display="none";
+  document.getElementById("viewImportadorBancario").style.display="block";
+}
+function voltarDoImportador(){
+  document.getElementById("viewImportadorBancario").style.display="none";
+  document.getElementById("viewEmpresas").style.display="block";
+}
+function setImpStatus(msg, tipo=""){
+  const el=document.getElementById("impStatus");
+  el.className="imp-status"+(tipo?" "+tipo:"");
+  el.textContent=msg;
+}
+function limparImportador(){
+  tarifasPdfAtual=[]; arquivoPdfAtual="";
+  document.getElementById("inputPdfBanco").value="";
+  setImpStatus("Aguardando PDF.");
+  renderizarImportador();
+}
+function normalizarDataPdf(data){
+  const p=data.split("/");
+  if(p.length!==3) return data;
+  let ano=p[2];
+  if(ano.length===2) ano="20"+ano;
+  return `${p[0]}/${p[1]}/${ano}`;
+}
+async function processarPdfBancario(file){
+  if(!file) return;
+  if(!window.pdfjsLib){ setImpStatus("Leitor PDF ainda carregando. Aguarde alguns segundos e tente novamente.","erro"); return; }
+  arquivoPdfAtual=file.name;
+  setImpStatus("Lendo PDF e procurando tarifas...");
+  try{
+    const bytes=new Uint8Array(await file.arrayBuffer());
+    const pdf=await window.pdfjsLib.getDocument({data:bytes}).promise;
+    const encontrados=[];
+    for(let n=1;n<=pdf.numPages;n++){
+      const page=await pdf.getPage(n);
+      const content=await page.getTextContent();
+      const items=content.items.map(i=>({text:i.str||"", x:i.transform?.[4]||0, y:i.transform?.[5]||0}));
+      // Agrupa itens visualmente por linha para preservar a tabela do PDF.
+      const linhas=[];
+      items.sort((a,b)=>Math.abs(b.y-a.y)>2 ? b.y-a.y : a.x-b.x);
+      items.forEach(item=>{
+        let linha=linhas.find(l=>Math.abs(l.y-item.y)<=2);
+        if(!linha){ linha={y:item.y,items:[]}; linhas.push(linha); }
+        linha.items.push(item);
+      });
+      linhas.forEach(l=>{
+        l.items.sort((a,b)=>a.x-b.x);
+        const texto=l.items.map(i=>i.text).join(" ").replace(/\s+/g," ").trim();
+        const m=texto.match(/(\d{2}\/\d{2}\/\d{2,4}).*Sa[ií]da\s+Tarifa\s+-?\s*R\$\s*([\d.]+,\d{2})/i);
+        if(m){
+          encontrados.push({
+            data:normalizarDataPdf(m[1]),
+            descricao:"Tarifa",
+            valor:Number(m[2].replace(/\./g,"").replace(",", ".")),
+            pagina:n,
+            chave:`${normalizarDataPdf(m[1])}|${m[2]}|${n}|${encontrados.length}`
+          });
+        }
+      });
+    }
+    // Marca somente duplicidade suspeita; não remove, pois várias tarifas iguais no mesmo dia são legítimas.
+    const cont={};
+    encontrados.forEach(t=>{ const k=t.data+"|"+t.valor.toFixed(2); cont[k]=(cont[k]||0)+1; });
+    encontrados.forEach(t=>t.validacao=cont[t.data+"|"+t.valor.toFixed(2)]>1 ? "DUP" : "OK");
+    tarifasPdfAtual=encontrados;
+    setImpStatus(`${pdf.numPages} página(s) lida(s). ${encontrados.length} tarifa(s) encontrada(s).`,"ok");
+    renderizarImportador();
+  }catch(err){
+    console.error(err);
+    setImpStatus("Não foi possível ler o PDF: "+err.message,"erro");
+  }
+}
+function renderizarImportador(){
+  const corpo=document.getElementById("corpoImportador");
+  if(!corpo) return;
+  const busca=(document.getElementById("impBusca")?.value||"").toLowerCase();
+  const filtro=document.getElementById("impFiltro")?.value||"TODOS";
+  const deb=document.getElementById("impDebito")?.value||"";
+  const cred=document.getElementById("impCredito")?.value||"";
+  const hist=document.getElementById("impHistorico")?.value||"SAÍDA TARIFA";
+  corpo.innerHTML="";
+  const lista=tarifasPdfAtual.filter(t=>{
+    if(filtro!=="TODOS" && t.validacao!==filtro) return false;
+    const alvo=(t.data+" "+formatarMoeda(t.valor)).toLowerCase();
+    return !busca || alvo.includes(busca);
+  });
+  lista.forEach((t,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td>${i+1}</td><td>${t.data}</td><td>Tarifa <span class="text-muted">(p. ${t.pagina})</span></td>
+      <td class="text-end conf-valor-neg">${formatarMoeda(t.valor)}</td><td>${escapeHtml(deb)}</td><td>${escapeHtml(cred)}</td>
+      <td>${escapeHtml(hist)}</td><td>${t.validacao==="DUP"?'<span class="badge bg-warning text-dark">Repetido no dia</span>':'<span class="badge bg-success">OK</span>'}</td>`;
+    corpo.appendChild(tr);
+  });
+  const total=tarifasPdfAtual.reduce((s,t)=>s+t.valor,0);
+  document.getElementById("impKpiArquivo").textContent=arquivoPdfAtual||"—";
+  document.getElementById("impKpiQtd").textContent=tarifasPdfAtual.length;
+  document.getElementById("impKpiTotal").textContent="R$ "+formatarMoeda(total);
+  const datas=tarifasPdfAtual.map(t=>t.data);
+  document.getElementById("impKpiPeriodo").textContent=datas.length?`${datas[datas.length-1]} a ${datas[0]}`:"—";
+  document.getElementById("impVazio").style.display=tarifasPdfAtual.length?"none":"block";
+  document.getElementById("btnGerarDominio").disabled=!tarifasPdfAtual.length;
+}
+function dataSaidaDominio(data){
+  if(document.getElementById("impFormatoData").value==="DD/MM/YY") return data.replace(/\/20(\d{2})$/,"/$1");
+  return data;
+}
+function csvEscape(v, sep){
+  const s=String(v??"");
+  return (s.includes(sep)||s.includes('"')||s.includes("\n")) ? `"${s.replace(/"/g,'""')}"` : s;
+}
+function gerarCsvDominio(){
+  if(!tarifasPdfAtual.length) return;
+  const sep=";";
+  const deb=document.getElementById("impDebito").value.trim();
+  const cred=document.getElementById("impCredito").value.trim();
+  const hist=document.getElementById("impHistorico").value.trim()||"SAÍDA TARIFA";
+  if(!deb||!cred){ alert("Informe as contas de débito e crédito."); return; }
+
+  // Layout EXATO validado para importação no Domínio.
+  const cab=["Data","Cód. Conta Debito","Cód. Conta Credito","Valor","Cód. Histórico","Complemento Histórico","Inicia Lote","Código Matriz/Filial","Centro de Custo Débito","Centro de Custo Crédito"];
+  const linhas=[cab.join(sep)];
+  tarifasPdfAtual.forEach((t,i)=>{
+    const valor=Number(t.valor).toLocaleString("pt-BR",{minimumFractionDigits:0,maximumFractionDigits:2,useGrouping:false});
+    const row=[dataSaidaDominio(t.data),deb,cred,valor,"",hist,i===0?"1":"","","",""];
+    linhas.push(row.map(v=>csvEscape(v,sep)).join(sep));
+  });
+  const blob=new Blob(["\uFEFF"+linhas.join("\r\n")],{type:"text/csv;charset=utf-8;"});
+  const url=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=url;
+  const periodo=tarifasPdfAtual[0]?.data?.split("/").slice(1).join("-")||"periodo";
+  a.download=`Importacao_Tarifas_${document.getElementById("impBanco").value}_${periodo}.csv`;
+  document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+}
+document.addEventListener("DOMContentLoaded",()=>{
+  const drop=document.getElementById("dropPdfBanco");
+  if(drop){
+    ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("drag");}));
+    ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("drag");}));
+    drop.addEventListener("drop",e=>processarPdfBancario(e.dataTransfer.files[0]));
+  }
+  ["impDebito","impCredito","impHistorico"].forEach(id=>document.getElementById(id)?.addEventListener("input",renderizarImportador));
+  renderizarImportador();
+});
+
 
 // Substitui a função buscarConsulta() anterior por esta versão combinada:
 function buscarConsulta(){
